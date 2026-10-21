@@ -1,0 +1,19 @@
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# Editor / IDE directories
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Archives & Temporary files
+*.rar
+*.zip
+*.7z
+*.log
+*.tmp

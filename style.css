@@ -1,0 +1,138 @@
+/* --- RESET DASAR --- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f0f2f5;
+    color: #333;
+    line-height: 1.6;
+}
+
+/* --- WADAH UTAMA --- */
+.container {
+    max-width: 1000px;
+    margin: 30px auto;
+    background: #ffffff;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* --- HEADER --- */
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #e74c3c;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+
+header h1 {
+    color: #2c3e50;
+    font-size: 24px;
+}
+
+/* --- TATA LETAK KOLOM KASIR --- */
+main {
+    display: flex;
+    gap: 25px; /* Jarak antara kolom kiri dan kanan */
+}
+
+.menu-section, .cart-section {
+    flex: 1; /* Membuat kedua kolom sama lebar */
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #e1e8ed;
+}
+
+h2 {
+    color: #34495e;
+    margin-bottom: 15px;
+    font-size: 20px;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 10px;
+}
+
+/* --- DAFTAR MENU --- */
+.menu-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fff;
+    padding: 12px 15px;
+    margin-bottom: 12px;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    border-left: 4px solid #3498db;
+}
+
+.menu-item span {
+    font-weight: 600;
+    font-size: 15px;
+}
+
+.menu-item button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.3s;
+}
+
+.menu-item button:hover {
+    background-color: #2980b9;
+}
+
+/* --- KERANJANG & PEMBAYARAN --- */
+#daftar-pesanan li {
+    display: flex;
+    justify-content: space-between;
+    background: #fff;
+    margin-bottom: 8px;
+    padding: 10px;
+    border-radius: 4px;
+    border: 1px solid #eee;
+    font-size: 15px;
+}
+
+.summary {
+    margin-top: 20px;
+    border-top: 2px dashed #ccc;
+    padding-top: 15px;
+}
+
+.summary input {
+    width: 100%;
+    padding: 12px;
+    margin-top: 8px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+.summary button {
+    background-color: #27ae60;
+    color: white;
+    border: none;
+    padding: 15px;
+    width: 100%;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 15px;
+    transition: background 0.3s;
+}
+
+.summary button:hover {
+    background-color: #2196f3;
+}
