@@ -19,6 +19,11 @@ if (isset($_POST['login'])) {
     $username = trim($_POST['username']);
     $password = trim($_POST['password']);
 
+    // Alias legacy jika username admin_nihayatus tersimpan di autofill browser
+    if ($username === 'admin_nihayatus') {
+        $username = 'owner_nihayatus';
+    }
+
     // Menggunakan Prepared Statement untuk keamanan dari SQL Injection
     $stmt = $conn->prepare("SELECT * FROM users WHERE username = ? AND password = ?");
     $stmt->bind_param("ss", $username, $password);

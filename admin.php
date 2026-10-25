@@ -3,8 +3,14 @@ require_once 'auth_check.php';
 protect_page(['Owner', 'Admin']);
 require_once 'config.php';
 
+// Migrasi alias sesi jika sebelumnya login menggunakan admin_nihayatus
+if (isset($_SESSION['username']) && $_SESSION['username'] === 'admin_nihayatus') {
+    $_SESSION['username'] = 'owner_nihayatus';
+    $_SESSION['id_user']  = 1;
+}
+
 // Pastikan sesi id_user dan data pengguna tersinkronisasi
-if (!isset($_SESSION['id_user']) && isset($_SESSION['username'])) {
+if ((!isset($_SESSION['id_user']) || $_SESSION['id_user'] == 3) && isset($_SESSION['username'])) {
     $q_u = $conn->prepare("SELECT id, nama_lengkap, role FROM users WHERE username = ?");
     $q_u->bind_param("s", $_SESSION['username']);
     $q_u->execute();
@@ -1695,53 +1701,6 @@ if (is_owner()) {
                         </tbody>
                     </table>
                 </div>
-            </div>
-
-            <!-- 2. Form Ubah Peran Pengguna Cepat (Role Assignment) -->
-            <div class="panel-card" style="max-width: 600px;">
-                <div class="panel-header" style="border-bottom: 1.5px solid var(--border); padding-bottom: 14px; margin-bottom: 18px;">
-                    <div>
-                        <h2><span>🔄</span> Penetapan Peran Pengguna (Role Assignment)</h2>
-                        <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
-                            Khusus Owner: Pilih akun staf dan tetapkan peran hak akses yang baru secara terpusat.
-                        </p>
-                    </div>
-                </div>
-
-                <form method="POST" action="">
-                    <div class="form-group">
-                        <label class="form-label">Pilih Akun Pengguna</label>
-                        <select name="id_user_peran" id="peran-pilih-user" class="form-control" required onchange="updatePeranSelect(this.value)">
-                            <?php foreach ($users_list as $u): ?>
-                                <option value="<?php echo $u['id']; ?>" data-role="<?php echo $u['role']; ?>">
-                                    <?php echo htmlspecialchars($u['nama_lengkap'] ?: $u['username']); ?> (@<?php echo htmlspecialchars($u['username']); ?>) — Peran Saat Ini: [<?php echo $u['role']; ?>]
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Tetapkan Peran Baru (Role)</label>
-                        <select name="role_baru" id="peran-role-baru" class="form-control" required>
-                            <?php foreach ($roles_list as $rl): ?>
-                                <option value="<?php echo htmlspecialchars($rl['nama_peran']); ?>">
-                                    <?php 
-                                        if ($rl['nama_peran'] === 'Owner') echo '👑 Owner (Pemilik Usaha - Akses Penuh)';
-                                        elseif ($rl['nama_peran'] === 'Admin') echo '⚙️ Admin (Staf Pengelola Persediaan & Menu)';
-                                        elseif ($rl['nama_peran'] === 'User') echo '👤 User (Staf Operasional / Layar Kasir POS)';
-                                        else echo '🛡️ ' . htmlspecialchars($rl['nama_peran']) . ' (' . htmlspecialchars($rl['deskripsi']) . ')';
-                                    ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-
-                    <div style="margin-top: 20px;">
-                        <button type="submit" name="ubah_peran_pengguna" class="btn-primary-sm" style="padding: 12px 20px; font-size: 13px;">
-                            🔄 Perbarui Peran Hak Akses
-                        </button>
-                    </div>
-                </form>
             </div>
         </div>
 

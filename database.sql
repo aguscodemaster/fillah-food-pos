@@ -1,21 +1,40 @@
 CREATE DATABASE IF NOT EXISTS fillah_food;
 USE fillah_food;
 
--- 1. Tabel Pengguna (Sesuai dengan Modul Login & RBAC Terpadu)
+-- 1. Tabel Peran Sistem (Role-Based Access Control)
+CREATE TABLE IF NOT EXISTS roles (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nama_peran VARCHAR(50) NOT NULL UNIQUE,
+    deskripsi VARCHAR(255) NOT NULL,
+    akses_pos TINYINT(1) NOT NULL DEFAULT 1,
+    akses_dashboard TINYINT(1) NOT NULL DEFAULT 0,
+    akses_stok TINYINT(1) NOT NULL DEFAULT 0,
+    akses_menu TINYINT(1) NOT NULL DEFAULT 0,
+    akses_pengguna TINYINT(1) NOT NULL DEFAULT 0,
+    dibuat_pada DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+INSERT INTO roles (nama_peran, deskripsi, akses_pos, akses_dashboard, akses_stok, akses_menu, akses_pengguna) VALUES
+('Owner', 'Pemilik Usaha - Hak akses penuh seluruh sistem, finansial, dan pengguna', 1, 1, 1, 1, 1),
+('Admin', 'Staf Persediaan - Pengelolaan stok bahan baku, belanja persediaan, dan menu', 1, 1, 1, 1, 0),
+('User', 'Pengguna Operasional - Hak akses transaksi kasir POS dan cetak nota struk', 1, 0, 0, 0, 0)
+ON DUPLICATE KEY UPDATE deskripsi=VALUES(deskripsi);
+
+-- 2. Tabel Pengguna (Sesuai dengan Modul Login & RBAC Terpadu)
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     nama_lengkap VARCHAR(100) NOT NULL DEFAULT '',
     email VARCHAR(100) NULL,
-    role ENUM('Owner', 'Admin', 'Kasir') NOT NULL DEFAULT 'Kasir'
+    role VARCHAR(50) NOT NULL DEFAULT 'User'
 ) ENGINE=InnoDB;
 
 -- Insert pengguna default multi-role (password: 12345)
 INSERT INTO users (username, password, nama_lengkap, email, role) VALUES 
 ('owner_nihayatus', '12345', 'Ibu Nihayatus Sofiyah (Pemilik)', 'owner@fillahfood.com', 'Owner'),
 ('admin_persediaan', '12345', 'Staf Pengelola Persediaan', 'admin@fillahfood.com', 'Admin'),
-('kasir_1', '12345', 'Aisyah Marta Dewi (Kasir)', 'kasir@fillahfood.com', 'Kasir')
+('kasir_1', '12345', 'Aisyah Marta Dewi (Kasir)', 'kasir@fillahfood.com', 'User')
 ON DUPLICATE KEY UPDATE role=VALUES(role), nama_lengkap=VALUES(nama_lengkap);
 
 -- 2. Tabel Bahan Baku (Untuk Modul Persediaan / Inventory)
