@@ -1,138 +1,78 @@
-/* --- RESET DASAR --- */
+/* ==========================================================================
+   FILLAH FOOD POS - UNIFIED DESIGN SYSTEM (THEME: WARM EMBER & CRISPY ORANGE)
+   Capstone Project STSI4440 Universitas Terbuka - Kelompok 3C
+   ========================================================================== */
+
+:root {
+    /* Brand Accent Colors */
+    --primary: #ea580c;         /* Deep Warm Orange */
+    --primary-hover: #c2410c;   /* Darker Orange for Active/Hover */
+    --primary-light: #fff7ed;   /* Soft Orange Tint */
+    --secondary: #f59e0b;       /* Golden Amber */
+
+    /* Semantic Status Colors */
+    --success: #16a34a;         /* Emerald Green for Payment & Safe Stock */
+    --success-light: #dcfce7;
+    --warning: #d97706;         /* Amber for Low Stock Warning */
+    --warning-light: #fef3c7;
+    --danger: #dc2626;          /* Crimson for Stock Depleted & Logout */
+    --danger-light: #fee2e2;
+
+    /* Surfaces & Neutrals */
+    --bg-canvas: #f8fafc;       /* Clean Light Slate Canvas */
+    --bg-card: #ffffff;         /* Pure White Card */
+    --sidebar-bg: #0f172a;      /* Deep Slate Navy (Admin Sidebar) */
+    --sidebar-hover: #1e293b;
+    --text-dark: #0f172a;       /* High Contrast Heading Text */
+    --text-muted: #64748b;      /* Slate Secondary Text */
+    --border: #e2e8f0;          /* Subdued Neutral Border */
+}
+
+/* Reset & Typography */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f0f2f5;
-    color: #333;
-    line-height: 1.6;
+    background-color: var(--bg-canvas);
+    color: var(--text-dark);
+    line-height: 1.5;
 }
 
-/* --- WADAH UTAMA --- */
-.container {
-    max-width: 1000px;
-    margin: 30px auto;
-    background: #ffffff;
-    padding: 25px;
-    border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-}
-
-/* --- HEADER --- */
-header {
-    display: flex;
-    justify-content: space-between;
+/* Utility Badges */
+.badge {
+    display: inline-flex;
     align-items: center;
-    border-bottom: 2px solid #e74c3c;
-    padding-bottom: 15px;
-    margin-bottom: 20px;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11.5px;
+    font-weight: 700;
 }
 
-header h1 {
-    color: #2c3e50;
-    font-size: 24px;
+.badge-success {
+    background-color: var(--success-light);
+    color: var(--success);
+    border: 1px solid #bbf7d0;
 }
 
-/* --- TATA LETAK KOLOM KASIR --- */
-main {
-    display: flex;
-    gap: 25px; /* Jarak antara kolom kiri dan kanan */
+.badge-warning {
+    background-color: var(--warning-light);
+    color: var(--warning);
+    border: 1px solid #fde68a;
 }
 
-.menu-section, .cart-section {
-    flex: 1; /* Membuat kedua kolom sama lebar */
-    background: #f8f9fa;
-    padding: 20px;
-    border-radius: 8px;
-    border: 1px solid #e1e8ed;
+.badge-danger {
+    background-color: var(--danger-light);
+    color: var(--danger);
+    border: 1px solid #fecaca;
 }
 
-h2 {
-    color: #34495e;
-    margin-bottom: 15px;
-    font-size: 20px;
-    border-bottom: 1px solid #ccc;
-    padding-bottom: 10px;
-}
-
-/* --- DAFTAR MENU --- */
-.menu-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #fff;
-    padding: 12px 15px;
-    margin-bottom: 12px;
-    border-radius: 6px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    border-left: 4px solid #3498db;
-}
-
-.menu-item span {
-    font-weight: 600;
-    font-size: 15px;
-}
-
-.menu-item button {
-    background-color: #3498db;
-    color: white;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    transition: background 0.3s;
-}
-
-.menu-item button:hover {
-    background-color: #2980b9;
-}
-
-/* --- KERANJANG & PEMBAYARAN --- */
-#daftar-pesanan li {
-    display: flex;
-    justify-content: space-between;
-    background: #fff;
-    margin-bottom: 8px;
-    padding: 10px;
-    border-radius: 4px;
-    border: 1px solid #eee;
-    font-size: 15px;
-}
-
-.summary {
-    margin-top: 20px;
-    border-top: 2px dashed #ccc;
-    padding-top: 15px;
-}
-
-.summary input {
-    width: 100%;
-    padding: 12px;
-    margin-top: 8px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    font-size: 16px;
-}
-
-.summary button {
-    background-color: #27ae60;
-    color: white;
-    border: none;
-    padding: 15px;
-    width: 100%;
-    border-radius: 5px;
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
-    margin-top: 15px;
-    transition: background 0.3s;
-}
-
-.summary button:hover {
-    background-color: #2196f3;
+.badge-primary {
+    background-color: var(--primary-light);
+    color: var(--primary);
+    border: 1px solid #fed7aa;
 }
