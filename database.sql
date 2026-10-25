@@ -38,7 +38,7 @@ INSERT INTO users (username, password, nama_lengkap, email, role) VALUES
 ('kasir_1', '12345', 'Aisyah Marta Dewi (Kasir)', 'kasir@fillahfood.com', 'User')
 ON DUPLICATE KEY UPDATE role=VALUES(role), nama_lengkap=VALUES(nama_lengkap);
 
--- 2. Tabel Bahan Baku (Untuk Modul Persediaan / Inventory)
+-- 3. Tabel Bahan Baku (Untuk Modul Persediaan / Inventory)
 CREATE TABLE IF NOT EXISTS bahan_baku (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nama_bahan VARCHAR(100) NOT NULL,
@@ -58,7 +58,7 @@ INSERT INTO bahan_baku (id, nama_bahan, stok, satuan, batas_minimum) VALUES
 (7, 'Telur Ayam', 30, 'butir', 5)
 ON DUPLICATE KEY UPDATE nama_bahan=VALUES(nama_bahan);
 
--- 3. Tabel Produk/Menu (Untuk Modul Kasir / POS)
+-- 4. Tabel Produk/Menu (Untuk Modul Kasir / POS)
 CREATE TABLE IF NOT EXISTS produk (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nama_produk VARCHAR(100) NOT NULL,
@@ -76,7 +76,7 @@ INSERT INTO produk (id, nama_produk, harga, kategori) VALUES
 (6, 'Paket Hemat Pelajar (Ayam Geprek + Nasi + Es Teh)', 12000, 'Makanan')
 ON DUPLICATE KEY UPDATE nama_produk=VALUES(nama_produk);
 
--- 4. Tabel Resep (Formula BOM untuk Pemotongan Stok Otomatis)
+-- 5. Tabel Resep (Formula BOM untuk Pemotongan Stok Otomatis)
 CREATE TABLE IF NOT EXISTS resep (
     id INT AUTO_INCREMENT PRIMARY KEY,
     id_menu INT NOT NULL,
@@ -105,7 +105,7 @@ INSERT INTO resep (id_menu, id_bahan, jumlah_dibutuhkan) VALUES
 (6, 3, 0.02),
 (6, 5, 0.10);
 
--- 5. Tabel Transaksi Kasir
+-- 6. Tabel Transaksi Kasir
 CREATE TABLE IF NOT EXISTS transaksi (
     id INT AUTO_INCREMENT PRIMARY KEY,
     tanggal_transaksi TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -114,7 +114,7 @@ CREATE TABLE IF NOT EXISTS transaksi (
     kembalian DECIMAL(10,2) NOT NULL
 ) ENGINE=InnoDB;
 
--- 6. Tabel Detail Transaksi
+-- 7. Tabel Detail Transaksi
 CREATE TABLE IF NOT EXISTS detail_transaksi (
     id INT AUTO_INCREMENT PRIMARY KEY,
     id_transaksi INT NOT NULL,
