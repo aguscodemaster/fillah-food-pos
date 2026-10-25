@@ -36,6 +36,7 @@ if (isset($_POST['login'])) {
         $_SESSION['username']     = $row['username'];
         $_SESSION['nama_lengkap'] = $row['nama_lengkap'];
         $_SESSION['role']         = $row['role'];
+        $_SESSION['foto']         = $row['foto'] ?? '';
         
         // Arahkan berdasarkan peran (Role-Based Access Control)
         if (in_array($row['role'], ['Owner', 'Admin'])) {

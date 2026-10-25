@@ -10,8 +10,8 @@ if (isset($_SESSION['username']) && $_SESSION['username'] === 'admin_nihayatus')
 }
 
 // Pastikan sesi id_user dan data pengguna tersinkronisasi
-if ((!isset($_SESSION['id_user']) || $_SESSION['id_user'] == 3) && isset($_SESSION['username'])) {
-    $q_u = $conn->prepare("SELECT id, nama_lengkap, role FROM users WHERE username = ?");
+if ((!isset($_SESSION['id_user']) || $_SESSION['id_user'] == 3 || !isset($_SESSION['foto'])) && isset($_SESSION['username'])) {
+    $q_u = $conn->prepare("SELECT id, nama_lengkap, role, foto FROM users WHERE username = ?");
     $q_u->bind_param("s", $_SESSION['username']);
     $q_u->execute();
     $res_u = $q_u->get_result();
@@ -23,6 +23,7 @@ if ((!isset($_SESSION['id_user']) || $_SESSION['id_user'] == 3) && isset($_SESSI
         if (empty($_SESSION['role'])) {
             $_SESSION['role'] = $r['role'];
         }
+        $_SESSION['foto'] = $r['foto'] ?? '';
     }
 }
 
@@ -50,6 +51,8 @@ $chk_produk = $conn->query("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE
 if ($chk_produk === 0) $conn->query("ALTER TABLE produk ADD COLUMN gambar VARCHAR(255) NULL");
 $chk_bahan = $conn->query("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='$db_name' AND TABLE_NAME='bahan_baku' AND COLUMN_NAME='gambar'")->num_rows;
 if ($chk_bahan === 0) $conn->query("ALTER TABLE bahan_baku ADD COLUMN gambar VARCHAR(255) NULL");
+$chk_user_foto = $conn->query("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='$db_name' AND TABLE_NAME='users' AND COLUMN_NAME='foto'")->num_rows;
+if ($chk_user_foto === 0) $conn->query("ALTER TABLE users ADD COLUMN foto VARCHAR(255) NULL");
 
 // --- Migrasi Otomatis: Tabel roles & kolom role dinamis pada users ---
 $chk_roles = $conn->query("SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='$db_name' AND TABLE_NAME='roles'")->num_rows;
@@ -237,12 +240,13 @@ if (is_owner()) {
         }
     }
 
-    // 2d. Simpan Pengaturan Pengguna (User Setting oleh Owner - Profil & Sandi Saja, Tanpa Ubah Peran)
+    // 2d. Simpan Pengaturan Pengguna (User Setting oleh Owner - Profil, Sandi, & Foto Profil)
     if (isset($_POST['simpan_setting_user'])) {
         $id_target    = intval($_POST['id_user_setting']);
         $nama_target  = trim($_POST['nama_lengkap_setting']);
         $email_target = trim($_POST['email_setting']);
         $pass_target  = trim($_POST['password_setting']);
+        $foto_target  = prosesUploadGambar('foto_user_setting', 'user');
 
         if (empty($nama_target)) {
             $pesan_error = "Nama lengkap pengguna tidak boleh kosong!";
@@ -255,23 +259,32 @@ if (is_owner()) {
                 $stmt_up->bind_param("ssi", $nama_target, $email_target, $id_target);
             }
             if ($stmt_up->execute()) {
+                if (!empty($foto_target)) {
+                    $stmt_f = $conn->prepare("UPDATE users SET foto = ? WHERE id = ?");
+                    $stmt_f->bind_param("si", $foto_target, $id_target);
+                    $stmt_f->execute();
+                    if (isset($_SESSION['id_user']) && $_SESSION['id_user'] == $id_target) {
+                        $_SESSION['foto'] = $foto_target;
+                    }
+                }
                 if (isset($_SESSION['id_user']) && $_SESSION['id_user'] == $id_target) {
                     $_SESSION['nama_lengkap'] = $nama_target;
                 }
-                $pesan_sukses = "Pengaturan pengguna berhasil disimpan!";
+                $pesan_sukses = "Pengaturan pengguna dan foto profil berhasil disimpan!";
             } else {
                 $pesan_error = "Gagal menyimpan pengaturan pengguna: " . $conn->error;
             }
         }
     }
 
-    // 2e. Simpan Profil & Kata Sandi Saya (Owner)
+    // 2e. Simpan Profil, Kata Sandi, & Foto Profil Saya (Owner)
     if (isset($_POST['simpan_profil_saya'])) {
         $id_saya    = intval($_SESSION['id_user'] ?? 0);
         $nama_saya  = trim($_POST['nama_profil']);
         $email_saya = trim($_POST['email_profil']);
         $pass_baru  = trim($_POST['password_baru_profil']);
         $pass_konf  = trim($_POST['konfirmasi_password_profil']);
+        $foto_saya  = prosesUploadGambar('foto_profil_saya', 'user');
 
         if (empty($nama_saya)) {
             $pesan_error = "Nama lengkap profil tidak boleh kosong!";
@@ -287,7 +300,13 @@ if (is_owner()) {
             }
             if ($stmt_me->execute()) {
                 $_SESSION['nama_lengkap'] = $nama_saya;
-                $pesan_sukses = "Profil dan keamanan akun Anda berhasil diperbarui!";
+                if (!empty($foto_saya)) {
+                    $stmt_fs = $conn->prepare("UPDATE users SET foto = ? WHERE id = ?");
+                    $stmt_fs->bind_param("si", $foto_saya, $id_saya);
+                    $stmt_fs->execute();
+                    $_SESSION['foto'] = $foto_saya;
+                }
+                $pesan_sukses = "Profil, kata sandi, dan foto profil Anda berhasil diperbarui!";
             } else {
                 $pesan_error = "Gagal memperbarui profil: " . $conn->error;
             }
@@ -459,9 +478,10 @@ $users_list = [];
 $roles_list = [];
 $role_user_counts = [];
 $current_user_email = "";
+$current_user_foto  = "";
 
 if (is_owner()) {
-    $res_users = $conn->query("SELECT id, username, nama_lengkap, email, role FROM users ORDER BY FIELD(role, 'Owner', 'Admin', 'User'), id ASC");
+    $res_users = $conn->query("SELECT id, username, nama_lengkap, email, role, foto FROM users ORDER BY FIELD(role, 'Owner', 'Admin', 'User'), id ASC");
     if ($res_users) {
         while ($u = $res_users->fetch_assoc()) {
             $users_list[] = $u;
@@ -486,12 +506,14 @@ if (is_owner()) {
     }
 
     if (isset($_SESSION['id_user'])) {
-        $stmt_cu = $conn->prepare("SELECT email FROM users WHERE id = ?");
+        $stmt_cu = $conn->prepare("SELECT email, foto FROM users WHERE id = ?");
         $stmt_cu->bind_param("i", $_SESSION['id_user']);
         $stmt_cu->execute();
         $r_cu = $stmt_cu->get_result()->fetch_assoc();
-        if ($r_cu && !empty($r_cu['email'])) {
-            $current_user_email = $r_cu['email'];
+        if ($r_cu) {
+            $current_user_email = $r_cu['email'] ?? '';
+            $current_user_foto  = $r_cu['foto'] ?? '';
+            $_SESSION['foto']   = $current_user_foto;
         }
     }
 }
@@ -1320,11 +1342,15 @@ if (is_owner()) {
             </div>
 
             <div class="admin-profile">
-                <div class="avatar" style="<?php echo (is_owner()) ? 'background: linear-gradient(135deg, #f59e0b, #d97706);' : 'background: linear-gradient(135deg, #0284c7, #0369a1);'; ?>">
-                    <?php 
-                        $nama_disp = !empty($_SESSION['nama_lengkap']) ? $_SESSION['nama_lengkap'] : $_SESSION['username'];
-                        echo strtoupper(substr($nama_disp, 0, 1)); 
-                    ?>
+                <div class="avatar" style="<?php echo (is_owner()) ? 'background: linear-gradient(135deg, #f59e0b, #d97706);' : 'background: linear-gradient(135deg, #0284c7, #0369a1);'; ?> overflow: hidden; padding: 0;">
+                    <?php if (!empty($_SESSION['foto']) && file_exists(__DIR__ . '/' . $_SESSION['foto'])): ?>
+                        <img src="<?php echo htmlspecialchars($_SESSION['foto']); ?>" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">
+                    <?php else: ?>
+                        <?php 
+                            $nama_disp = !empty($_SESSION['nama_lengkap']) ? $_SESSION['nama_lengkap'] : $_SESSION['username'];
+                            echo strtoupper(substr($nama_disp, 0, 1)); 
+                        ?>
+                    <?php endif; ?>
                 </div>
                 <div class="admin-profile-name">
                     <div style="font-size: 13.5px; font-weight: 700;">
@@ -1529,13 +1555,17 @@ if (is_owner()) {
                                 <tr>
                                     <td>
                                         <div style="display: flex; align-items: center; gap: 10px;">
-                                            <div style="width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px;
+                                            <div style="width: 34px; height: 34px; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; flex-shrink: 0;
                                                 <?php 
-                                                    if ($u['role'] === 'Owner') echo 'background: #fef3c7; color: #b45309; border: 1px solid #fde68a;';
-                                                    elseif ($u['role'] === 'Admin') echo 'background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;';
-                                                    else echo 'background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0;';
+                                                    if ($u['role'] === 'Owner') echo 'background: #fef3c7; color: #b45309; border: 1.5px solid #fde68a;';
+                                                    elseif ($u['role'] === 'Admin') echo 'background: #e0f2fe; color: #0369a1; border: 1.5px solid #bae6fd;';
+                                                    else echo 'background: #dcfce7; color: #15803d; border: 1.5px solid #bbf7d0;';
                                                 ?>">
-                                                <?php echo strtoupper(substr($u['nama_lengkap'] ?: $u['username'], 0, 1)); ?>
+                                                <?php if (!empty($u['foto']) && file_exists(__DIR__ . '/' . $u['foto'])): ?>
+                                                    <img src="<?php echo htmlspecialchars($u['foto']); ?>" alt="Foto" style="width: 100%; height: 100%; object-fit: cover;">
+                                                <?php else: ?>
+                                                    <?php echo strtoupper(substr($u['nama_lengkap'] ?: $u['username'], 0, 1)); ?>
+                                                <?php endif; ?>
                                             </div>
                                             <div>
                                                 <strong><?php echo htmlspecialchars($u['nama_lengkap'] ?: $u['username']); ?></strong>
@@ -1732,8 +1762,34 @@ if (is_owner()) {
                         </select>
                     </div>
 
-                    <form method="POST" action="">
+                    <form method="POST" action="" enctype="multipart/form-data">
                         <input type="hidden" name="id_user_setting" id="setting-id-user" value="<?php echo !empty($users_list) ? $users_list[0]['id'] : ''; ?>">
+
+                        <div class="form-group">
+                            <label class="form-label">📷 Foto Profil Pengguna <span style="font-weight:400;color:#64748b;">(Opsional — JPG/PNG/WebP, maks 2 MB)</span></label>
+                            <div style="display: flex; align-items: center; gap: 16px; margin-top: 6px; background: #f8fafc; padding: 12px; border-radius: 10px; border: 1.5px solid var(--border);">
+                                <div id="setting-avatar-preview" style="width: 60px; height: 60px; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; border: 2px solid var(--border); flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+                                    <?php 
+                                        $u0_role = !empty($users_list) ? $users_list[0]['role'] : 'User';
+                                        if ($u0_role === 'Owner') echo 'background: #fef3c7; color: #b45309; border-color: #fde68a;';
+                                        elseif ($u0_role === 'Admin') echo 'background: #e0f2fe; color: #0369a1; border-color: #bae6fd;';
+                                        else echo 'background: #dcfce7; color: #15803d; border-color: #bbf7d0;';
+                                    ?>">
+                                    <?php if (!empty($users_list[0]['foto']) && file_exists(__DIR__ . '/' . $users_list[0]['foto'])): ?>
+                                        <img src="<?php echo htmlspecialchars($users_list[0]['foto']); ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                                    <?php else: ?>
+                                        <?php echo strtoupper(substr(!empty($users_list) ? ($users_list[0]['nama_lengkap'] ?: $users_list[0]['username']) : 'U', 0, 1)); ?>
+                                    <?php endif; ?>
+                                </div>
+                                <div style="flex: 1;">
+                                    <button type="button" class="btn-primary-sm" style="background: #ffffff; color: var(--text-dark); border: 1.5px solid var(--border); padding: 7px 14px; font-size: 12px; font-weight: 700;" onclick="document.getElementById('input-foto-user').click()">
+                                        📁 Pilih Foto Baru
+                                    </button>
+                                    <input type="file" id="input-foto-user" name="foto_user_setting" accept="image/*" style="display: none;" onchange="previewFotoUser(this)">
+                                    <div id="nama-file-user" style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Klik tombol di atas untuk memilih foto</div>
+                                </div>
+                            </div>
+                        </div>
 
                         <div class="form-group">
                             <label class="form-label">Username (ID Akun)</label>
@@ -1797,21 +1853,45 @@ if (is_owner()) {
                         </div>
                     </div>
 
-                    <div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 12px; padding: 14px; margin-bottom: 18px; display: flex; align-items: center; gap: 12px;">
-                        <div style="width: 44px; height: 44px; border-radius: 50%; background: #fef3c7; color: #b45309; border: 1.5px solid #fde68a; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; flex-shrink: 0;">
-                            👑
+                    <div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 12px; padding: 14px; margin-bottom: 18px; display: flex; align-items: center; gap: 14px;">
+                        <div id="profil-saya-avatar-badge" style="width: 48px; height: 48px; border-radius: 50%; overflow: hidden; background: #fef3c7; color: #b45309; border: 2px solid #fde68a; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; flex-shrink: 0; box-shadow: 0 2px 6px rgba(180,83,9,0.12);">
+                            <?php if (!empty($current_user_foto) && file_exists(__DIR__ . '/' . $current_user_foto)): ?>
+                                <img src="<?php echo htmlspecialchars($current_user_foto); ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                            <?php else: ?>
+                                👑
+                            <?php endif; ?>
                         </div>
-                        <div>
+                        <div style="flex: 1;">
                             <div style="font-weight: 700; font-size: 13.5px; color: #92400e;">
                                 <?php echo htmlspecialchars($_SESSION['nama_lengkap'] ?? 'Pemilik Usaha'); ?>
                             </div>
-                            <div style="font-size: 11.5px; color: #b45309;">
+                            <div style="font-size: 11.5px; color: #b45309; margin-top: 2px;">
                                 Username: <code>@<?php echo htmlspecialchars($_SESSION['username'] ?? 'owner'); ?></code> &bull; Peran: <strong>Owner (Pemilik Usaha)</strong>
                             </div>
                         </div>
                     </div>
 
-                    <form method="POST" action="">
+                    <form method="POST" action="" enctype="multipart/form-data">
+                        <div class="form-group">
+                            <label class="form-label">📷 Foto Profil Saya <span style="font-weight:400;color:#64748b;">(Opsional — JPG/PNG/WebP, maks 2 MB)</span></label>
+                            <div style="display: flex; align-items: center; gap: 16px; margin-top: 6px; background: #f8fafc; padding: 12px; border-radius: 10px; border: 1.5px solid var(--border);">
+                                <div id="profil-saya-preview" style="width: 60px; height: 60px; border-radius: 50%; overflow: hidden; background: #fef3c7; color: #b45309; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; border: 2px solid #fde68a; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
+                                    <?php if (!empty($current_user_foto) && file_exists(__DIR__ . '/' . $current_user_foto)): ?>
+                                        <img src="<?php echo htmlspecialchars($current_user_foto); ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                                    <?php else: ?>
+                                        👑
+                                    <?php endif; ?>
+                                </div>
+                                <div style="flex: 1;">
+                                    <button type="button" class="btn-primary-sm" style="background: #ffffff; color: var(--text-dark); border: 1.5px solid var(--border); padding: 7px 14px; font-size: 12px; font-weight: 700;" onclick="document.getElementById('input-foto-saya').click()">
+                                        📁 Ganti Foto Profil
+                                    </button>
+                                    <input type="file" id="input-foto-saya" name="foto_profil_saya" accept="image/*" style="display: none;" onchange="previewFotoSaya(this)">
+                                    <div id="nama-file-saya" style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Pilih foto dari komputer Anda</div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="form-group">
                             <label class="form-label">Nama Lengkap Anda</label>
                             <input type="text" name="nama_profil" class="form-control" required value="<?php echo htmlspecialchars($_SESSION['nama_lengkap'] ?? ''); ?>">
@@ -2285,6 +2365,38 @@ if (is_owner()) {
             }
         }
 
+        function previewFotoUser(input) {
+            if (input.files && input.files[0]) {
+                var file = input.files[0];
+                var label = document.getElementById('nama-file-user');
+                if (label) label.textContent = 'File: ' + file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    var preview = document.getElementById('setting-avatar-preview');
+                    if (preview) {
+                        preview.innerHTML = '<img src="' + e.target.result + '" style="width: 100%; height: 100%; object-fit: cover;">';
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function previewFotoSaya(input) {
+            if (input.files && input.files[0]) {
+                var file = input.files[0];
+                var label = document.getElementById('nama-file-saya');
+                if (label) label.textContent = 'File: ' + file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    var p1 = document.getElementById('profil-saya-preview');
+                    var p2 = document.getElementById('profil-saya-avatar-badge');
+                    if (p1) p1.innerHTML = '<img src="' + e.target.result + '" style="width: 100%; height: 100%; object-fit: cover;">';
+                    if (p2) p2.innerHTML = '<img src="' + e.target.result + '" style="width: 100%; height: 100%; object-fit: cover;">';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
         function muatDataUserSetting(userId) {
             if (!dataUsersMap || dataUsersMap.length === 0) return;
             var u = dataUsersMap.find(function(item) { return item.id == userId; });
@@ -2297,15 +2409,38 @@ if (is_owner()) {
             var passInput = document.getElementById('setting-password');
             var selectUser = document.getElementById('setting-pilih-user');
             var roleBadge = document.getElementById('setting-role-badge');
+            var avatarPreview = document.getElementById('setting-avatar-preview');
+            var namaFileUser = document.getElementById('nama-file-user');
+            var inputFotoUser = document.getElementById('input-foto-user');
 
             if (idInput) idInput.value = u.id;
             if (userInput) userInput.value = '@' + u.username;
             if (namaInput) namaInput.value = u.nama_lengkap || '';
             if (emailInput) emailInput.value = u.email || '';
             if (passInput) passInput.value = '';
+            if (inputFotoUser) inputFotoUser.value = '';
+            if (namaFileUser) namaFileUser.textContent = 'Klik tombol di atas untuk memilih foto';
+
             if (selectUser && selectUser.value != userId) {
                 selectUser.value = userId;
             }
+
+            if (avatarPreview) {
+                if (u.foto) {
+                    avatarPreview.style.background = 'transparent';
+                    avatarPreview.innerHTML = '<img src="' + u.foto + '" style="width: 100%; height: 100%; object-fit: cover;">';
+                } else {
+                    var initChar = (u.nama_lengkap || u.username || 'U').charAt(0).toUpperCase();
+                    var bgCol = (u.role === 'Owner') ? '#fef3c7' : ((u.role === 'Admin') ? '#e0f2fe' : '#dcfce7');
+                    var textCol = (u.role === 'Owner') ? '#b45309' : ((u.role === 'Admin') ? '#0369a1' : '#15803d');
+                    var borderCol = (u.role === 'Owner') ? '#fde68a' : ((u.role === 'Admin') ? '#bae6fd' : '#bbf7d0');
+                    avatarPreview.style.background = bgCol;
+                    avatarPreview.style.color = textCol;
+                    avatarPreview.style.borderColor = borderCol;
+                    avatarPreview.innerHTML = initChar;
+                }
+            }
+
             if (roleBadge) {
                 if (u.role === 'Owner') {
                     roleBadge.className = 'badge badge-role-owner';
@@ -2323,16 +2458,6 @@ if (is_owner()) {
                     roleBadge.className = 'badge badge-role-custom';
                     roleBadge.textContent = '🛡️ ' + u.role;
                 }
-            }
-        }
-
-        function updatePeranSelect(userId) {
-            if (!dataUsersMap || dataUsersMap.length === 0) return;
-            var u = dataUsersMap.find(function(item) { return item.id == userId; });
-            if (!u) return;
-            var roleSelect = document.getElementById('peran-role-baru');
-            if (roleSelect) {
-                roleSelect.value = u.role;
             }
         }
 

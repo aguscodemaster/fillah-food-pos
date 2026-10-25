@@ -1157,8 +1157,13 @@ $waktu_sekarang = date('d/m/Y H:i:s') . ' WIB';
         </div>
 
         <div class="nav-actions">
-            <span class="user-pill">
-                <span>👤</span> <strong><?php echo htmlspecialchars($_SESSION['username']); ?></strong> (<?php echo htmlspecialchars($_SESSION['role']); ?>)
+            <span class="user-pill" style="display: inline-flex; align-items: center; gap: 7px;">
+                <?php if (!empty($_SESSION['foto']) && file_exists(__DIR__ . '/' . $_SESSION['foto'])): ?>
+                    <img src="<?php echo htmlspecialchars($_SESSION['foto']); ?>" alt="Foto" style="width: 22px; height: 22px; border-radius: 50%; object-fit: cover;">
+                <?php else: ?>
+                    <span>👤</span>
+                <?php endif; ?>
+                <strong><?php echo htmlspecialchars($_SESSION['username']); ?></strong> (<?php echo htmlspecialchars($_SESSION['role']); ?>)
             </span>
             <a href="menu.php" target="_blank" class="btn-link">📱 E-Menu Pelanggan</a>
             <?php if (in_array($_SESSION['role'], ['Owner', 'Admin'])): ?>

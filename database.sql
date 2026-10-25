@@ -27,7 +27,8 @@ CREATE TABLE IF NOT EXISTS users (
     password VARCHAR(255) NOT NULL,
     nama_lengkap VARCHAR(100) NOT NULL DEFAULT '',
     email VARCHAR(100) NULL,
-    role VARCHAR(50) NOT NULL DEFAULT 'User'
+    role VARCHAR(50) NOT NULL DEFAULT 'User',
+    foto VARCHAR(255) NULL
 ) ENGINE=InnoDB;
 
 -- Insert pengguna default multi-role (password: 12345)
