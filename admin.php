@@ -34,6 +34,34 @@ if ($tab_aktif === 'pengguna' && !is_owner()) {
     $tab_aktif = 'dashboard';
 }
 
+// --- Migrasi Otomatis: Tambah kolom gambar jika belum ada (kompatibel MySQL 5.x) ---
+$db_name = $conn->query("SELECT DATABASE()")->fetch_row()[0];
+$chk_produk = $conn->query("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='$db_name' AND TABLE_NAME='produk' AND COLUMN_NAME='gambar'")->num_rows;
+if ($chk_produk === 0) $conn->query("ALTER TABLE produk ADD COLUMN gambar VARCHAR(255) NULL");
+$chk_bahan = $conn->query("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='$db_name' AND TABLE_NAME='bahan_baku' AND COLUMN_NAME='gambar'")->num_rows;
+if ($chk_bahan === 0) $conn->query("ALTER TABLE bahan_baku ADD COLUMN gambar VARCHAR(255) NULL");
+
+// Helper: Proses Upload Gambar (opsional)
+function prosesUploadGambar(string $field, string $prefix): string {
+    if (!isset($_FILES[$field]) || $_FILES[$field]['error'] !== UPLOAD_ERR_OK) {
+        return ''; // Tidak ada file atau error, kembalikan kosong (pakai gambar default)
+    }
+    $tmp  = $_FILES[$field]['tmp_name'];
+    $name = $_FILES[$field]['name'];
+    $size = $_FILES[$field]['size'];
+    $mime = mime_content_type($tmp);
+
+    $allowed_mime = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!in_array($mime, $allowed_mime)) return '';
+    if ($size > 2 * 1024 * 1024) return ''; // Maks 2 MB
+
+    $ext      = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+    $filename = $prefix . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+    $dest     = __DIR__ . '/uploads/' . $filename;
+
+    return move_uploaded_file($tmp, $dest) ? 'uploads/' . $filename : '';
+}
+
 // 1. Logika Tambah Stok Masuk (Inbound Stock - saat belanja bahan baku)
 if (isset($_POST['tambah_stok_masuk'])) {
     $id_bahan = intval($_POST['id_bahan']);
@@ -55,14 +83,15 @@ if (isset($_POST['tambah_stok_masuk'])) {
 
 // 2. Logika Tambah Bahan Baku Baru
 if (isset($_POST['tambah_bahan_baru'])) {
-    $nama_bahan = trim($_POST['nama_bahan']);
-    $satuan = trim($_POST['satuan']);
-    $stok_awal = floatval($_POST['stok_awal']);
+    $nama_bahan    = trim($_POST['nama_bahan']);
+    $satuan        = trim($_POST['satuan']);
+    $stok_awal     = floatval($_POST['stok_awal']);
     $batas_minimum = floatval($_POST['batas_minimum']);
 
     if (!empty($nama_bahan) && !empty($satuan)) {
-        $stmt_new = $conn->prepare("INSERT INTO bahan_baku (nama_bahan, stok, satuan, batas_minimum) VALUES (?, ?, ?, ?)");
-        $stmt_new->bind_param("sdsd", $nama_bahan, $stok_awal, $satuan, $batas_minimum);
+        $gambar_bahan = prosesUploadGambar('gambar_bahan', 'bahan');
+        $stmt_new = $conn->prepare("INSERT INTO bahan_baku (nama_bahan, stok, satuan, batas_minimum, gambar) VALUES (?, ?, ?, ?, ?)");
+        $stmt_new->bind_param("sdsds", $nama_bahan, $stok_awal, $satuan, $batas_minimum, $gambar_bahan);
         if ($stmt_new->execute()) {
             $pesan_sukses = "Bahan baku baru '$nama_bahan' berhasil didaftarkan!";
         } else {
@@ -74,12 +103,13 @@ if (isset($_POST['tambah_bahan_baru'])) {
 // 2b. Logika Tambah Menu Produk Baru (Makanan / Minuman)
 if (isset($_POST['tambah_produk_baru'])) {
     $nama_produk = trim($_POST['nama_produk']);
-    $harga = floatval($_POST['harga']);
-    $kategori = trim($_POST['kategori']);
+    $harga       = floatval($_POST['harga']);
+    $kategori    = trim($_POST['kategori']);
 
     if (!empty($nama_produk) && $harga > 0) {
-        $stmt_p = $conn->prepare("INSERT INTO produk (nama_produk, harga, kategori) VALUES (?, ?, ?)");
-        $stmt_p->bind_param("sds", $nama_produk, $harga, $kategori);
+        $gambar_produk = prosesUploadGambar('gambar_produk', 'produk');
+        $stmt_p = $conn->prepare("INSERT INTO produk (nama_produk, harga, kategori, gambar) VALUES (?, ?, ?, ?)");
+        $stmt_p->bind_param("sdss", $nama_produk, $harga, $kategori, $gambar_produk);
         if ($stmt_p->execute()) {
             $pesan_sukses = "Menu produk baru '$nama_produk' berhasil ditambahkan ke daftar kasir!";
         } else {
@@ -716,6 +746,42 @@ if (is_owner()) {
             flex-wrap: wrap;
         }
 
+
+        .img-upload-area {
+            border: 2px dashed #cbd5e1;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+            overflow: hidden;
+        }
+
+        .img-upload-area:hover {
+            border-color: var(--primary);
+            background: #fff7ed;
+        }
+
+        .img-upload-preview {
+            width: 100%;
+            height: 110px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            overflow: hidden;
+        }
+
+        .img-upload-icon {
+            font-size: 32px;
+            line-height: 1;
+        }
+
+        .img-upload-hint {
+            font-size: 11.5px;
+            color: #64748b;
+            font-weight: 600;
+        }
+
         /* ==========================================================================
            RESPONSIVE BREAKPOINTS FOR ADMIN DASHBOARD
            ========================================================================== */
@@ -1235,7 +1301,7 @@ if (is_owner()) {
     <div class="modal-overlay" id="modal-bahan-baru">
         <div class="modal-box">
             <h3 class="modal-title">✨ Tambah Bahan Baku Baru</h3>
-            <form method="POST" action="">
+            <form method="POST" action="" enctype="multipart/form-data">
                 <div class="form-group">
                     <label class="form-label">Nama Bahan Baku</label>
                     <input type="text" name="nama_bahan" class="form-control" placeholder="Contoh: Bawang Merah, Saus Tiram" required>
@@ -1256,6 +1322,17 @@ if (is_owner()) {
                     <input type="number" step="0.01" name="batas_minimum" class="form-control" placeholder="Contoh: 2" required>
                 </div>
 
+                <div class="form-group">
+                    <label class="form-label">📷 Foto Bahan Baku <span style="font-weight:400;color:#64748b;">(Opsional — maks 2 MB, JPG/PNG/WebP)</span></label>
+                    <div class="img-upload-area" onclick="document.getElementById('input-gambar-bahan').click()">
+                        <div class="img-upload-preview" id="preview-bahan">
+                            <span class="img-upload-icon">📦</span>
+                            <span class="img-upload-hint">Klik untuk pilih foto</span>
+                        </div>
+                    </div>
+                    <input type="file" id="input-gambar-bahan" name="gambar_bahan" accept="image/*" style="display:none" onchange="previewGambar(this, 'preview-bahan')">
+                </div>
+
                 <div class="modal-footer">
                     <button type="submit" name="tambah_bahan_baru" class="btn-primary-sm" style="flex:1; padding:12px;">Daftarkan Bahan</button>
                     <button type="button" class="btn-primary-sm" style="background:#cbd5e1; color:#0f172a;" onclick="tutupModalBahanBaru()">Batal</button>
@@ -1268,7 +1345,7 @@ if (is_owner()) {
     <div class="modal-overlay" id="modal-produk-baru">
         <div class="modal-box">
             <h3 class="modal-title">🍗 Tambah Menu Makanan / Minuman Baru</h3>
-            <form method="POST" action="">
+            <form method="POST" action="" enctype="multipart/form-data">
                 <div class="form-group">
                     <label class="form-label">Nama Menu Makanan / Minuman</label>
                     <input type="text" name="nama_produk" class="form-control" placeholder="Contoh: Ayam Bakar Madu" required>
@@ -1276,7 +1353,7 @@ if (is_owner()) {
 
                 <div class="form-group">
                     <label class="form-label">Kategori Menu</label>
-                    <select name="kategori" class="form-control" required>
+                    <select name="kategori" id="select-kategori-produk" class="form-control" required onchange="updateDefaultPreviewProduk(this.value)">
                         <option value="Makanan">Makanan</option>
                         <option value="Minuman">Minuman</option>
                     </select>
@@ -1285,6 +1362,17 @@ if (is_owner()) {
                 <div class="form-group">
                     <label class="form-label">Harga Jual Satuan (Rp)</label>
                     <input type="number" step="500" name="harga" class="form-control" placeholder="Contoh: 12000" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">📷 Foto Menu <span style="font-weight:400;color:#64748b;">(Opsional — maks 2 MB, JPG/PNG/WebP)</span></label>
+                    <div class="img-upload-area" onclick="document.getElementById('input-gambar-produk').click()">
+                        <div class="img-upload-preview" id="preview-produk">
+                            <span class="img-upload-icon" id="preview-produk-icon">🍗</span>
+                            <span class="img-upload-hint">Klik untuk pilih foto</span>
+                        </div>
+                    </div>
+                    <input type="file" id="input-gambar-produk" name="gambar_produk" accept="image/*" style="display:none" onchange="previewGambar(this, 'preview-produk')">
                 </div>
 
                 <div class="modal-footer">
@@ -1384,27 +1472,29 @@ if (is_owner()) {
     <?php endif; ?>
 
     <script>
+        /* ---- Modal Open/Close ---- */
         function bukaModalStokMasuk() {
             document.getElementById('modal-stok-masuk').style.display = 'flex';
         }
-
         function tutupModalStokMasuk() {
             document.getElementById('modal-stok-masuk').style.display = 'none';
         }
-
         function bukaModalBahanBaru() {
             document.getElementById('modal-bahan-baru').style.display = 'flex';
         }
-
         function tutupModalBahanBaru() {
+            // Reset preview saat modal ditutup
+            resetPreview('preview-bahan', '📦');
+            document.getElementById('input-gambar-bahan').value = '';
             document.getElementById('modal-bahan-baru').style.display = 'none';
         }
-
         function bukaModalProdukBaru() {
             document.getElementById('modal-produk-baru').style.display = 'flex';
         }
-
         function tutupModalProdukBaru() {
+            // Reset preview saat modal ditutup
+            resetPreview('preview-produk', '🍗');
+            document.getElementById('input-gambar-produk').value = '';
             document.getElementById('modal-produk-baru').style.display = 'none';
         }
 
@@ -1438,11 +1528,9 @@ if (is_owner()) {
             document.getElementById('satuan-label').textContent = satuan;
             bukaModalStokMasuk();
         }
-
         function toggleSidebar() {
             document.body.classList.toggle('sidebar-open');
         }
-
         function closeSidebar() {
             document.body.classList.remove('sidebar-open');
         }
@@ -1497,6 +1585,44 @@ if (is_owner()) {
             var tab = params.get('tab') || 'dashboard';
             pindahTab(tab);
         });
+        /* ---- Preview Gambar Upload ---- */
+        function previewGambar(input, previewId) {
+            const previewEl = document.getElementById(previewId);
+            if (!input.files || !input.files[0]) return;
+            const file = input.files[0];
+            // Validasi di sisi klien
+            if (!file.type.startsWith('image/')) {
+                alert('File harus berupa gambar (JPG, PNG, WebP, GIF).');
+                input.value = '';
+                return;
+            }
+            if (file.size > 2 * 1024 * 1024) {
+                alert('Ukuran gambar maksimal 2 MB.');
+                input.value = '';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewEl.innerHTML = `<img src="${e.target.result}" alt="Preview" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">`;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function resetPreview(previewId, emoji) {
+            const el = document.getElementById(previewId);
+            if (el) {
+                el.innerHTML = `<span class="img-upload-icon">${emoji}</span><span class="img-upload-hint">Klik untuk pilih foto</span>`;
+            }
+        }
+
+        function updateDefaultPreviewProduk(kategori) {
+            // Hanya update default icon jika belum ada gambar dipilih
+            const input = document.getElementById('input-gambar-produk');
+            if (!input.files || !input.files[0]) {
+                const icon = kategori === 'Minuman' ? '🥤' : '🍗';
+                resetPreview('preview-produk', icon);
+            }
+        }
     </script>
 </body>
 </html>

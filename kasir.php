@@ -1210,7 +1210,13 @@ $waktu_sekarang = date('d/m/Y H:i:s') . ' WIB';
                             <span class="card-header-badge"><?php echo htmlspecialchars($p['kategori']); ?></span>
                             
                             <div class="product-thumb">
-                                <?php echo ($p['kategori'] === 'Makanan') ? '🍗' : '🥤'; ?>
+                                <?php if (!empty($p['gambar']) && file_exists($p['gambar'])): ?>
+                                    <img src="<?php echo htmlspecialchars($p['gambar']); ?>" 
+                                         alt="<?php echo htmlspecialchars($p['nama_produk']); ?>"
+                                         style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+                                <?php else: ?>
+                                    <?php echo ($p['kategori'] === 'Makanan') ? '🍗' : '🥤'; ?>
+                                <?php endif; ?>
                             </div>
                             
                             <h3 class="product-name"><?php echo htmlspecialchars($p['nama_produk']); ?></h3>

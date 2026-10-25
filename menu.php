@@ -169,6 +169,7 @@ if ($result) {
             justify-content: center;
             font-size: clamp(28px, 5vw, 34px);
             flex-shrink: 0;
+            overflow: hidden; /* Untuk gambar upload agar crop rapi */
         }
 
         .menu-info {
@@ -287,7 +288,13 @@ if ($result) {
             <?php foreach ($menu_list as $item): ?>
                 <div class="menu-card" data-cat="<?php echo htmlspecialchars($item['kategori']); ?>">
                     <div class="menu-icon">
-                        <?php echo ($item['kategori'] === 'Makanan') ? '🍗' : '🥤'; ?>
+                        <?php if (!empty($item['gambar']) && file_exists($item['gambar'])): ?>
+                            <img src="<?php echo htmlspecialchars($item['gambar']); ?>" 
+                                 alt="<?php echo htmlspecialchars($item['nama_produk']); ?>"
+                                 style="width:100%;height:100%;object-fit:cover;">
+                        <?php else: ?>
+                            <?php echo ($item['kategori'] === 'Makanan') ? '🍗' : '🥤'; ?>
+                        <?php endif; ?>
                     </div>
                     <div class="menu-info">
                         <div>
