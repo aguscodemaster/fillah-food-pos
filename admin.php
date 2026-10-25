@@ -23,14 +23,16 @@ if (!isset($_SESSION['id_user']) && isset($_SESSION['username'])) {
 $pesan_sukses = "";
 $pesan_error = "";
 
-// Status Tab Aktif (Dashboard atau Kelola Pengguna)
+// Status Tab Aktif (Dashboard, Kelola Pengguna, atau User Setting)
 $tab_aktif = isset($_GET['tab']) ? trim($_GET['tab']) : 'dashboard';
 if (isset($_POST['tambah_pengguna']) || isset($_POST['edit_pengguna']) || isset($_POST['hapus_pengguna'])) {
     $tab_aktif = 'pengguna';
+} elseif (isset($_POST['simpan_setting_user']) || isset($_POST['simpan_profil_saya'])) {
+    $tab_aktif = 'user-setting';
 } elseif (isset($_POST['tambah_stok_masuk']) || isset($_POST['tambah_bahan_baru']) || isset($_POST['tambah_produk_baru'])) {
     $tab_aktif = 'dashboard';
 }
-if ($tab_aktif === 'pengguna' && !is_owner()) {
+if (in_array($tab_aktif, ['pengguna', 'user-setting']) && !is_owner()) {
     $tab_aktif = 'dashboard';
 }
 
@@ -198,6 +200,67 @@ if (is_owner()) {
             }
         }
     }
+
+    // 2d. Simpan Pengaturan Pengguna (User Setting oleh Owner)
+    if (isset($_POST['simpan_setting_user'])) {
+        $id_target    = intval($_POST['id_user_setting']);
+        $nama_target  = trim($_POST['nama_lengkap_setting']);
+        $email_target = trim($_POST['email_setting']);
+        $role_target  = trim($_POST['role_setting']);
+        $pass_target  = trim($_POST['password_setting']);
+
+        if (!in_array($role_target, ['Owner', 'Admin', 'Kasir'])) {
+            $pesan_error = "Peran (role) yang dipilih tidak valid!";
+        } elseif (empty($nama_target)) {
+            $pesan_error = "Nama lengkap pengguna tidak boleh kosong!";
+        } else {
+            if (!empty($pass_target)) {
+                $stmt_up = $conn->prepare("UPDATE users SET nama_lengkap = ?, email = ?, role = ?, password = ? WHERE id = ?");
+                $stmt_up->bind_param("ssssi", $nama_target, $email_target, $role_target, $pass_target, $id_target);
+            } else {
+                $stmt_up = $conn->prepare("UPDATE users SET nama_lengkap = ?, email = ?, role = ? WHERE id = ?");
+                $stmt_up->bind_param("sssi", $nama_target, $email_target, $role_target, $id_target);
+            }
+            if ($stmt_up->execute()) {
+                if (isset($_SESSION['id_user']) && $_SESSION['id_user'] == $id_target) {
+                    $_SESSION['nama_lengkap'] = $nama_target;
+                    $_SESSION['role'] = $role_target;
+                }
+                $pesan_sukses = "Pengaturan pengguna berhasil disimpan!";
+            } else {
+                $pesan_error = "Gagal menyimpan pengaturan pengguna: " . $conn->error;
+            }
+        }
+    }
+
+    // 2e. Simpan Profil & Kata Sandi Saya (Owner)
+    if (isset($_POST['simpan_profil_saya'])) {
+        $id_saya    = intval($_SESSION['id_user'] ?? 0);
+        $nama_saya  = trim($_POST['nama_profil']);
+        $email_saya = trim($_POST['email_profil']);
+        $pass_baru  = trim($_POST['password_baru_profil']);
+        $pass_konf  = trim($_POST['konfirmasi_password_profil']);
+
+        if (empty($nama_saya)) {
+            $pesan_error = "Nama lengkap profil tidak boleh kosong!";
+        } elseif (!empty($pass_baru) && $pass_baru !== $pass_konf) {
+            $pesan_error = "Konfirmasi kata sandi baru tidak cocok!";
+        } else {
+            if (!empty($pass_baru)) {
+                $stmt_me = $conn->prepare("UPDATE users SET nama_lengkap = ?, email = ?, password = ? WHERE id = ?");
+                $stmt_me->bind_param("sssi", $nama_saya, $email_saya, $pass_baru, $id_saya);
+            } else {
+                $stmt_me = $conn->prepare("UPDATE users SET nama_lengkap = ?, email = ? WHERE id = ?");
+                $stmt_me->bind_param("ssi", $nama_saya, $email_saya, $id_saya);
+            }
+            if ($stmt_me->execute()) {
+                $_SESSION['nama_lengkap'] = $nama_saya;
+                $pesan_sukses = "Profil dan keamanan akun Anda berhasil diperbarui!";
+            } else {
+                $pesan_error = "Gagal memperbarui profil: " . $conn->error;
+            }
+        }
+    }
 }
 
 // 3. Ambil Data Metrik KPI
@@ -233,11 +296,21 @@ if ($res_trx) {
 
 // 4. Ambil Seluruh Data Pengguna (Khusus Role Owner)
 $users_list = [];
+$current_user_email = "";
 if (is_owner()) {
     $res_users = $conn->query("SELECT id, username, nama_lengkap, email, role FROM users ORDER BY FIELD(role, 'Owner', 'Admin', 'Kasir'), id ASC");
     if ($res_users) {
         while ($u = $res_users->fetch_assoc()) {
             $users_list[] = $u;
+        }
+    }
+    if (isset($_SESSION['id_user'])) {
+        $stmt_cu = $conn->prepare("SELECT email FROM users WHERE id = ?");
+        $stmt_cu->bind_param("i", $_SESSION['id_user']);
+        $stmt_cu->execute();
+        $r_cu = $stmt_cu->get_result()->fetch_assoc();
+        if ($r_cu && !empty($r_cu['email'])) {
+            $current_user_email = $r_cu['email'];
         }
     }
 }
@@ -371,6 +444,83 @@ if (is_owner()) {
         .nav-item.active {
             background-color: var(--primary);
             box-shadow: 0 4px 12px rgba(234, 88, 12, 0.35);
+        }
+
+        /* Navigasi Dropdown / Submenu Pengaturan */
+        .nav-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .nav-parent {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .nav-parent-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nav-parent .nav-arrow {
+            font-size: 10px;
+            color: #94a3b8;
+            transition: transform 0.2s ease;
+        }
+
+        .nav-group.open .nav-parent .nav-arrow {
+            transform: rotate(180deg);
+            color: #ffffff;
+        }
+
+        .nav-parent.active {
+            background-color: rgba(255, 255, 255, 0.1);
+            box-shadow: none;
+            color: #ffffff;
+        }
+
+        .nav-submenu {
+            display: none;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 4px;
+            margin-bottom: 6px;
+            padding-left: 14px;
+            margin-left: 18px;
+            border-left: 2px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .nav-group.open .nav-submenu {
+            display: flex;
+        }
+
+        .nav-subitem {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 12px;
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 12.5px;
+            font-weight: 600;
+            border-radius: 8px;
+            transition: all 0.15s;
+        }
+
+        .nav-subitem:hover {
+            background-color: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+        }
+
+        .nav-subitem.active {
+            background: rgba(234, 88, 12, 0.22);
+            color: #fdba74;
+            font-weight: 700;
+            box-shadow: inset 3px 0 0 #f97316;
         }
 
         .sidebar-footer {
@@ -920,9 +1070,22 @@ if (is_owner()) {
                     <span>📊</span> Dashboard
                 </a>
                 <?php if (is_owner()): ?>
-                <a href="admin.php?tab=pengguna" data-tab="pengguna" class="nav-item <?php echo ($tab_aktif === 'pengguna') ? 'active' : ''; ?>" onclick="pindahTab('pengguna', event)">
-                    <span>👥</span> Kelola Pengguna
-                </a>
+                <div class="nav-group <?php echo in_array($tab_aktif, ['pengguna', 'user-setting']) ? 'open' : ''; ?>" id="nav-group-pengaturan">
+                    <div class="nav-item nav-parent <?php echo in_array($tab_aktif, ['pengguna', 'user-setting']) ? 'active' : ''; ?>" onclick="toggleSubmenu('nav-group-pengaturan')">
+                        <div class="nav-parent-title">
+                            <span>⚙️</span> Pengaturan
+                        </div>
+                        <span class="nav-arrow">▼</span>
+                    </div>
+                    <div class="nav-submenu">
+                        <a href="admin.php?tab=pengguna" data-tab="pengguna" class="nav-subitem <?php echo ($tab_aktif === 'pengguna') ? 'active' : ''; ?>" onclick="pindahTab('pengguna', event)">
+                            <span>👥</span> Pengelolaan Pengguna
+                        </a>
+                        <a href="admin.php?tab=user-setting" data-tab="user-setting" class="nav-subitem <?php echo ($tab_aktif === 'user-setting') ? 'active' : ''; ?>" onclick="pindahTab('user-setting', event)">
+                            <span>👤</span> User Setting
+                        </a>
+                    </div>
+                </div>
                 <?php endif; ?>
                 <a href="menu.php" target="_blank" class="nav-item">
                     <span>📱</span> E-Menu Pelanggan
@@ -947,8 +1110,20 @@ if (is_owner()) {
             <div class="topbar-left">
                 <button type="button" class="btn-hamburger" onclick="toggleSidebar()" aria-label="Buka Menu">☰</button>
                 <div class="topbar-title">
-                    <h1 id="topbar-page-title"><?php echo ($tab_aktif === 'pengguna') ? 'Kelola Pengguna & Hak Akses' : 'Dashboard Manajemen & Persediaan'; ?></h1>
-                    <p id="topbar-page-subtitle"><?php echo ($tab_aktif === 'pengguna') ? 'Pengaturan akun pengguna dan penetapan peran (Owner, Admin, Kasir)' : 'Sistem Informasi Terintegrasi UMKM Fillah Food - Capstone Project STSI4440 UT'; ?></p>
+                    <h1 id="topbar-page-title">
+                        <?php 
+                            if ($tab_aktif === 'pengguna') echo 'Pengelolaan Pengguna & Hak Akses';
+                            elseif ($tab_aktif === 'user-setting') echo 'User Setting & Pengaturan Akun';
+                            else echo 'Dashboard Manajemen & Persediaan'; 
+                        ?>
+                    </h1>
+                    <p id="topbar-page-subtitle">
+                        <?php 
+                            if ($tab_aktif === 'pengguna') echo 'Daftar akun staf terdaftar, pembagian peran akses, dan pendaftaran staf baru';
+                            elseif ($tab_aktif === 'user-setting') echo 'Konfigurasi akun staf, pengaturan profil, dan kata sandi oleh Owner';
+                            else echo 'Sistem Informasi Terintegrasi UMKM Fillah Food - Capstone Project STSI4440 UT'; 
+                        ?>
+                    </p>
                 </div>
             </div>
 
@@ -1144,39 +1319,6 @@ if (is_owner()) {
                     </button>
                 </div>
 
-                <!-- Ringkasan Hak Akses Peran -->
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-bottom: 20px;">
-                    <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 14px;">
-                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-                            <span style="font-size: 18px;">👑</span>
-                            <strong style="font-size: 13px; color: #b45309;">Pemilik Usaha (Owner)</strong>
-                        </div>
-                        <div style="font-size: 11.5px; color: #78350f; line-height: 1.4;">
-                            Akses mutlak & penuh: Pengawasan omzet real-time, stok persediaan, formula resep BOM, menu produk, serta hak mengelola akun pengguna dan peran staf.
-                        </div>
-                    </div>
-
-                    <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 12px; padding: 14px;">
-                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-                            <span style="font-size: 18px;">⚙️</span>
-                            <strong style="font-size: 13px; color: #0369a1;">Staf Persediaan (Admin)</strong>
-                        </div>
-                        <div style="font-size: 11.5px; color: #075985; line-height: 1.4;">
-                            Akses operasional gudang: Input pasokan stok bahan masuk, tambah bahan baku baru, manajemen harga menu, dan pantau riwayat penjualan kasir.
-                        </div>
-                    </div>
-
-                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 14px;">
-                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-                            <span style="font-size: 18px;">🛒</span>
-                            <strong style="font-size: 13px; color: #15803d;">Staf Kasir (Kasir)</strong>
-                        </div>
-                        <div style="font-size: 11.5px; color: #14532d; line-height: 1.4;">
-                            Akses transaksi POS: Layar pencatatan pesanan kasir, perhitungan pembayaran, cetak struk nota belanja, dan pemotongan stok bahan otomatis.
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Tabel Pengguna Terdaftar -->
                 <div class="table-responsive">
                     <table>
@@ -1237,6 +1379,10 @@ if (is_owner()) {
                                                 onclick="bukaModalEditPengguna(<?php echo $u['id']; ?>, '<?php echo addslashes($u['nama_lengkap']); ?>', '<?php echo addslashes($u['username']); ?>', '<?php echo addslashes($u['email']); ?>', '<?php echo $u['role']; ?>')">
                                                 ✏️ Edit
                                             </button>
+                                            <button type="button" style="background: #e0f2fe; border: 1px solid #bae6fd; color: #0369a1; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 11.5px; font-weight: 700;"
+                                                onclick="bukaUserSetting(<?php echo $u['id']; ?>)">
+                                                ⚙️ Setting
+                                            </button>
                                             <?php if (!isset($_SESSION['id_user']) || $u['id'] != $_SESSION['id_user']): ?>
                                                 <form method="POST" action="" onsubmit="return confirm('Apakah Anda yakin ingin menghapus akun @<?php echo addslashes($u['username']); ?>?');" style="display: inline;">
                                                     <input type="hidden" name="id_user_hapus" value="<?php echo $u['id']; ?>">
@@ -1256,6 +1402,136 @@ if (is_owner()) {
                         </tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+
+        <!-- TAB VIEW 3: USER SETTING (Khusus Role Owner) -->
+        <div id="view-user-setting" class="tab-view" style="<?php echo ($tab_aktif === 'user-setting') ? '' : 'display: none;'; ?>">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px;">
+                
+                <!-- Card 1: Pengaturan Akun Staf & Pengguna oleh Owner -->
+                <div class="panel-card">
+                    <div class="panel-header" style="border-bottom: 1.5px solid var(--border); padding-bottom: 14px; margin-bottom: 18px;">
+                        <div>
+                            <h2><span>⚙️</span> Pengaturan Akun Pengguna</h2>
+                            <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                                Sebagai Owner, Anda dapat mengatur profil, email, sandi baru, dan hak akses seluruh staf.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="background: #f8fafc; padding: 14px; border-radius: 10px; border: 1.5px solid var(--border); margin-bottom: 18px;">
+                        <label class="form-label" style="font-weight: 700; color: var(--text-dark); margin-bottom: 6px;">
+                            Pilih Pengguna yang Ingin Diatur:
+                        </label>
+                        <select id="setting-pilih-user" class="form-control" onchange="muatDataUserSetting(this.value)" style="font-weight: 600;">
+                            <?php foreach ($users_list as $u): ?>
+                                <option value="<?php echo $u['id']; ?>">
+                                    <?php echo htmlspecialchars($u['nama_lengkap'] ?: $u['username']); ?> (@<?php echo htmlspecialchars($u['username']); ?>) — [<?php echo $u['role']; ?>]
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <form method="POST" action="">
+                        <input type="hidden" name="id_user_setting" id="setting-id-user" value="<?php echo !empty($users_list) ? $users_list[0]['id'] : ''; ?>">
+
+                        <div class="form-group">
+                            <label class="form-label">Username (ID Akun)</label>
+                            <input type="text" id="setting-username" class="form-control" disabled style="background: #f1f5f9; cursor: not-allowed; font-family: monospace; font-weight: 600;" value="<?php echo !empty($users_list) ? '@' . htmlspecialchars($users_list[0]['username']) : ''; ?>">
+                            <small style="color: var(--text-muted); font-size: 11px;">Username bersifat permanen untuk integritas riwayat transaksi.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Nama Lengkap Pengguna</label>
+                            <input type="text" name="nama_lengkap_setting" id="setting-nama" class="form-control" required value="<?php echo !empty($users_list) ? htmlspecialchars($users_list[0]['nama_lengkap']) : ''; ?>">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Alamat Email Pengguna</label>
+                            <input type="email" name="email_setting" id="setting-email" class="form-control" placeholder="user@fillahfood.com" value="<?php echo !empty($users_list) ? htmlspecialchars($users_list[0]['email'] ?? '') : ''; ?>">
+                            <small style="color: var(--text-muted); font-size: 11px;">Digunakan untuk verifikasi dan pengamanan login OTP email.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Peran Hak Akses (Role)</label>
+                            <select name="role_setting" id="setting-role" class="form-control" required>
+                                <option value="Kasir">🛒 Kasir (Hanya Layar Kasir POS)</option>
+                                <option value="Admin">⚙️ Admin (Staf Pengelola Persediaan & Menu)</option>
+                                <option value="Owner">👑 Owner (Pemilik Usaha - Akses Penuh)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Reset / Atur Kata Sandi Baru</label>
+                            <input type="password" name="password_setting" id="setting-password" class="form-control" placeholder="Ketik kata sandi baru (kosongkan jika tidak diubah)">
+                            <small style="color: var(--text-muted); font-size: 11px;">Owner dapat langsung mengganti kata sandi staf jika staf lupa password.</small>
+                        </div>
+
+                        <div style="margin-top: 20px;">
+                            <button type="submit" name="simpan_setting_user" class="btn-primary-sm" style="padding: 12px 20px; width: 100%; justify-content: center; font-size: 13px;">
+                                💾 Simpan Pengaturan Pengguna
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Card 2: Profil & Sandi Saya (Owner) -->
+                <div class="panel-card">
+                    <div class="panel-header" style="border-bottom: 1.5px solid var(--border); padding-bottom: 14px; margin-bottom: 18px;">
+                        <div>
+                            <h2><span>👤</span> Profil & Sandi Saya (Owner)</h2>
+                            <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                                Pengaturan profil dan kata sandi akun Owner Anda yang sedang aktif.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 12px; padding: 14px; margin-bottom: 18px; display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 44px; height: 44px; border-radius: 50%; background: #fef3c7; color: #b45309; border: 1.5px solid #fde68a; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; flex-shrink: 0;">
+                            👑
+                        </div>
+                        <div>
+                            <div style="font-weight: 700; font-size: 13.5px; color: #92400e;">
+                                <?php echo htmlspecialchars($_SESSION['nama_lengkap'] ?? 'Pemilik Usaha'); ?>
+                            </div>
+                            <div style="font-size: 11.5px; color: #b45309;">
+                                Username: <code>@<?php echo htmlspecialchars($_SESSION['username'] ?? 'owner'); ?></code> &bull; Peran: <strong>Owner (Pemilik Usaha)</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form method="POST" action="">
+                        <div class="form-group">
+                            <label class="form-label">Nama Lengkap Anda</label>
+                            <input type="text" name="nama_profil" class="form-control" required value="<?php echo htmlspecialchars($_SESSION['nama_lengkap'] ?? ''); ?>">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Alamat Email Anda</label>
+                            <input type="email" name="email_profil" class="form-control" placeholder="owner@fillahfood.com" value="<?php echo htmlspecialchars($current_user_email); ?>">
+                            <small style="color: var(--text-muted); font-size: 11px;">Alamat email penerima verifikasi & OTP keamanan sistem.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Kata Sandi Baru</label>
+                            <input type="password" name="password_baru_profil" class="form-control" placeholder="Ketik kata sandi baru jika ingin diganti">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Konfirmasi Kata Sandi Baru</label>
+                            <input type="password" name="konfirmasi_password_profil" class="form-control" placeholder="Ulangi kata sandi baru untuk konfirmasi">
+                            <small style="color: var(--text-muted); font-size: 11px;">Kosongkan kolom sandi jika tidak ingin mengubah kata sandi Anda saat ini.</small>
+                        </div>
+
+                        <div style="margin-top: 20px;">
+                            <button type="submit" name="simpan_profil_saya" class="btn-primary-sm" style="padding: 12px 20px; width: 100%; justify-content: center; font-size: 13px; background: #0284c7;">
+                                🔒 Perbarui Profil & Sandi Saya
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
             </div>
         </div>
         <?php endif; ?>
@@ -1528,6 +1804,8 @@ if (is_owner()) {
             document.getElementById('satuan-label').textContent = satuan;
             bukaModalStokMasuk();
         }
+        var dataUsersMap = <?php echo json_encode($users_list); ?>;
+
         function toggleSidebar() {
             document.body.classList.toggle('sidebar-open');
         }
@@ -1535,15 +1813,63 @@ if (is_owner()) {
             document.body.classList.remove('sidebar-open');
         }
 
+        function toggleSubmenu(groupId) {
+            var group = document.getElementById(groupId);
+            if (group) {
+                group.classList.toggle('open');
+            }
+        }
+
+        function muatDataUserSetting(userId) {
+            if (!dataUsersMap || dataUsersMap.length === 0) return;
+            var u = dataUsersMap.find(function(item) { return item.id == userId; });
+            if (!u) return;
+
+            var idInput = document.getElementById('setting-id-user');
+            var userInput = document.getElementById('setting-username');
+            var namaInput = document.getElementById('setting-nama');
+            var emailInput = document.getElementById('setting-email');
+            var roleInput = document.getElementById('setting-role');
+            var passInput = document.getElementById('setting-password');
+            var selectUser = document.getElementById('setting-pilih-user');
+
+            if (idInput) idInput.value = u.id;
+            if (userInput) userInput.value = '@' + u.username;
+            if (namaInput) namaInput.value = u.nama_lengkap || '';
+            if (emailInput) emailInput.value = u.email || '';
+            if (roleInput) roleInput.value = u.role;
+            if (passInput) passInput.value = '';
+            if (selectUser && selectUser.value != userId) {
+                selectUser.value = userId;
+            }
+        }
+
+        function bukaUserSetting(userId) {
+            pindahTab('user-setting');
+            muatDataUserSetting(userId);
+        }
+
         function pindahTab(tabName, ev) {
             if (ev) ev.preventDefault();
 
             // Ubah item navigasi yang aktif di sidebar
-            document.querySelectorAll('.nav-menu .nav-item').forEach(function(item) {
+            document.querySelectorAll('.nav-menu .nav-item, .nav-menu .nav-subitem').forEach(function(item) {
                 item.classList.remove('active');
             });
             var activeNav = document.querySelector('[data-tab="' + tabName + '"]');
             if (activeNav) activeNav.classList.add('active');
+
+            // Jika membuka child Pengaturan, pastikan grup Pengaturan berstatus open
+            var groupPengaturan = document.getElementById('nav-group-pengaturan');
+            if (groupPengaturan) {
+                var parentItem = groupPengaturan.querySelector('.nav-parent');
+                if (tabName === 'pengguna' || tabName === 'user-setting') {
+                    groupPengaturan.classList.add('open');
+                    if (parentItem) parentItem.classList.add('active');
+                } else {
+                    if (parentItem) parentItem.classList.remove('active');
+                }
+            }
 
             // Sembunyikan semua tab view, tampilkan yang dipilih
             var views = document.querySelectorAll('.tab-view');
@@ -1563,8 +1889,11 @@ if (is_owner()) {
                     titleEl.textContent = 'Dashboard Manajemen & Persediaan';
                     subtitleEl.textContent = 'Sistem Informasi Terintegrasi UMKM Fillah Food - Capstone Project STSI4440 UT';
                 } else if (tabName === 'pengguna') {
-                    titleEl.textContent = 'Kelola Pengguna & Hak Akses';
-                    subtitleEl.textContent = 'Pengaturan akun pengguna dan penetapan peran (Owner, Admin, Kasir)';
+                    titleEl.textContent = 'Pengelolaan Pengguna & Hak Akses';
+                    subtitleEl.textContent = 'Daftar akun staf terdaftar, pembagian peran akses, dan pendaftaran staf baru';
+                } else if (tabName === 'user-setting') {
+                    titleEl.textContent = 'User Setting & Pengaturan Akun';
+                    subtitleEl.textContent = 'Konfigurasi akun staf, pengaturan profil, dan kata sandi oleh Owner';
                 }
             }
 
@@ -1584,6 +1913,16 @@ if (is_owner()) {
             var params = new URLSearchParams(window.location.search);
             var tab = params.get('tab') || 'dashboard';
             pindahTab(tab);
+        });
+
+        // Inisialisasi awal form User Setting
+        document.addEventListener('DOMContentLoaded', function() {
+            var selectUser = document.getElementById('setting-pilih-user');
+            if (selectUser && selectUser.value) {
+                muatDataUserSetting(selectUser.value);
+            } else if (typeof dataUsersMap !== 'undefined' && dataUsersMap.length > 0) {
+                muatDataUserSetting(dataUsersMap[0].id);
+            }
         });
         /* ---- Preview Gambar Upload ---- */
         function previewGambar(input, previewId) {
