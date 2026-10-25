@@ -93,6 +93,25 @@ function renderKeranjang() {
         });
     }
 
+    // Update total count & label
+    const totalQty = keranjang.reduce((sum, item) => sum + item.qty, 0);
+    document.querySelectorAll('.cart-badge-count').forEach(el => {
+        el.textContent = totalQty;
+    });
+
+    const floatBar = document.getElementById('mobile-floating-cart');
+    if (floatBar) {
+        const floatCount = document.getElementById('float-cart-count');
+        const floatTotal = document.getElementById('float-cart-total');
+        if (floatCount) floatCount.textContent = totalQty;
+        if (floatTotal) floatTotal.textContent = formatRupiah(totalBelanja);
+        if (totalQty > 0) {
+            floatBar.classList.add('has-items');
+        } else {
+            floatBar.classList.remove('has-items');
+        }
+    }
+
     // Update label total
     document.getElementById('label-subtotal').textContent = formatRupiah(totalBelanja);
     document.getElementById('label-total').textContent = formatRupiah(totalBelanja);
@@ -254,4 +273,21 @@ function tutupModalStruk() {
     keranjang = [];
     renderKeranjang();
     resetInputBayar();
+    switchKasirView('menu');
 }
+
+// 13. Navigasi Tampilan Responsive Layar Kasir (Mobile / Tablet)
+function switchKasirView(view) {
+    const tabMenu = document.getElementById('tab-btn-menu');
+    const tabCart = document.getElementById('tab-btn-cart');
+    if (view === 'cart') {
+        document.body.classList.add('mobile-view-cart');
+        if (tabMenu) tabMenu.classList.remove('active');
+        if (tabCart) tabCart.classList.add('active');
+    } else {
+        document.body.classList.remove('mobile-view-cart');
+        if (tabMenu) tabMenu.classList.add('active');
+        if (tabCart) tabCart.classList.remove('active');
+    }
+}
+window.switchKasirView = switchKasirView;

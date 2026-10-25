@@ -54,71 +54,55 @@ if (isset($_POST['login'])) {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
     <style>
-        :root {
-            --primary: #ea580c;
-            --primary-hover: #c2410c;
-            --primary-light: #fff7ed;
-            --bg-canvas: #f8fafc;
-            --card-bg: #ffffff;
-            --text-dark: #0f172a;
-            --text-muted: #64748b;
-            --border: #e2e8f0;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-        }
-
         body {
             background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 50%, #f1f5f9 100%);
             min-height: 100vh;
+            min-height: 100dvh;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            padding: clamp(12px, 3vw, 24px);
         }
 
         .login-card {
-            background: var(--card-bg);
+            background: var(--bg-card);
             width: 100%;
             max-width: 420px;
-            padding: 36px 32px;
-            border-radius: 20px;
+            padding: clamp(20px, 6vw, 36px) clamp(16px, 5vw, 32px);
+            border-radius: var(--radius-xl);
             box-shadow: 0 10px 30px -5px rgba(234, 88, 12, 0.15), 0 0 1px 1px rgba(0,0,0,0.05);
             border: 1px solid rgba(234, 88, 12, 0.1);
         }
 
         .brand-header {
             text-align: center;
-            margin-bottom: 28px;
+            margin-bottom: clamp(18px, 4vw, 28px);
         }
 
         .brand-icon {
-            width: 64px;
-            height: 64px;
+            width: clamp(52px, 12vw, 64px);
+            height: clamp(52px, 12vw, 64px);
             background: linear-gradient(135deg, #ea580c, #f59e0b);
-            border-radius: 16px;
+            border-radius: var(--radius-md);
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 32px;
+            font-size: clamp(26px, 6vw, 32px);
             box-shadow: 0 8px 16px -4px rgba(234, 88, 12, 0.4);
-            margin-bottom: 14px;
+            margin-bottom: 12px;
         }
 
         .brand-title {
-            font-size: 24px;
+            font-size: clamp(20px, 5vw, 24px);
             font-weight: 800;
             color: var(--text-dark);
             letter-spacing: -0.5px;
         }
 
         .brand-subtitle {
-            font-size: 13px;
+            font-size: clamp(11.5px, 2.8vw, 13px);
             color: var(--text-muted);
             margin-top: 4px;
         }
@@ -133,6 +117,7 @@ if (isset($_POST['login'])) {
             border-radius: 20px;
             margin-top: 8px;
             border: 1px solid #fed7aa;
+            line-height: 1.3;
         }
 
         .error-alert {
@@ -140,7 +125,7 @@ if (isset($_POST['login'])) {
             color: #dc2626;
             border: 1px solid #fecaca;
             padding: 12px 14px;
-            border-radius: 10px;
+            border-radius: var(--radius-md);
             font-size: 13px;
             margin-bottom: 20px;
             display: flex;
@@ -149,7 +134,7 @@ if (isset($_POST['login'])) {
         }
 
         .form-group {
-            margin-bottom: 18px;
+            margin-bottom: 16px;
         }
 
         .form-label {
@@ -166,13 +151,15 @@ if (isset($_POST['login'])) {
 
         .form-input {
             width: 100%;
-            padding: 12px 14px;
+            min-height: 44px; /* Touch target >= 44px */
+            padding: 10px 14px;
             border: 1.5px solid var(--border);
-            border-radius: 12px;
+            border-radius: var(--radius-md);
             font-size: 14px;
             color: var(--text-dark);
             transition: all 0.2s ease;
             outline: none;
+            background: #ffffff;
         }
 
         .form-input:focus {
@@ -182,17 +169,22 @@ if (isset($_POST['login'])) {
 
         .btn-submit {
             width: 100%;
+            min-height: 46px; /* Touch target >= 44px */
             background: linear-gradient(135deg, #ea580c, #c2410c);
             color: white;
             border: none;
-            padding: 13px;
-            border-radius: 12px;
+            padding: 12px;
+            border-radius: var(--radius-md);
             font-size: 15px;
             font-weight: 700;
             cursor: pointer;
             box-shadow: 0 6px 15px -3px rgba(234, 88, 12, 0.4);
             transition: all 0.2s ease;
             margin-top: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
         }
 
         .btn-submit:hover {
@@ -202,12 +194,12 @@ if (isset($_POST['login'])) {
 
         /* Demo credentials helper */
         .demo-box {
-            margin-top: 24px;
-            padding: 14px;
+            margin-top: 20px;
+            padding: 12px 14px;
             background: #f8fafc;
             border: 1px dashed #cbd5e1;
-            border-radius: 12px;
-            font-size: 11.5px;
+            border-radius: var(--radius-md);
+            font-size: 12px;
             color: #475569;
         }
 
@@ -218,16 +210,22 @@ if (isset($_POST['login'])) {
         .demo-row {
             display: flex;
             justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 4px;
             margin-top: 6px;
-            padding: 4px 6px;
+            padding: 6px 8px;
             background: #ffffff;
-            border-radius: 6px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
             cursor: pointer;
-            transition: background 0.15s;
+            transition: all 0.15s;
+            font-size: 11.5px;
         }
 
         .demo-row:hover {
             background: #ffedd5;
+            border-color: var(--primary);
         }
 
         .public-menu-link {
@@ -244,6 +242,17 @@ if (isset($_POST['login'])) {
 
         .public-menu-link a:hover {
             text-decoration: underline;
+        }
+
+        /* Media queries for very small screens */
+        @media (max-width: 360px) {
+            .login-card {
+                padding: 16px 12px;
+            }
+            .demo-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
         }
     </style>
 </head>
