@@ -17,6 +17,13 @@ if ($result_produk) {
         $daftar_produk[] = $row;
     }
 }
+
+// Ambil info transaksi terakhir untuk sinkronisasi nomor nota sesuai daftar transaksi
+$q_last = $conn->query("SELECT MAX(id) AS last_id FROM transaksi");
+$row_last = $q_last ? $q_last->fetch_assoc() : null;
+$next_trx_id = ($row_last && $row_last['last_id']) ? ($row_last['last_id'] + 1) : 1;
+$next_no_nota = "#TRX-" . str_pad($next_trx_id, 4, "0", STR_PAD_LEFT);
+$waktu_sekarang = date('d/m/Y H:i:s') . ' WIB';
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -666,26 +673,7 @@ if ($result_produk) {
 
         /* Mobile Floating Bottom Cart Bar (Sticky trigger) */
         .mobile-floating-cart {
-            display: none;
-            position: fixed;
-            bottom: max(12px, env(safe-area-inset-bottom, 12px));
-            left: 12px;
-            right: 12px;
-            background: #0f172a;
-            color: #ffffff;
-            border-radius: 16px;
-            padding: 10px 16px;
-            box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.35);
-            align-items: center;
-            justify-content: space-between;
-            z-index: 50;
-            cursor: pointer;
-            transition: transform 0.2s ease, opacity 0.2s ease;
-        }
-
-        .mobile-floating-cart.has-items {
-            display: flex;
-            animation: slideUpFloat 0.25s ease;
+            display: none !important; /* Tersembunyi pada layar desktop */
         }
 
         @keyframes slideUpFloat {
@@ -696,18 +684,22 @@ if ($result_produk) {
         .float-cart-info {
             display: flex;
             flex-direction: column;
+            gap: 1px;
+            min-width: 0;
         }
 
         .float-cart-badge {
             font-size: 11px;
             color: #94a3b8;
             font-weight: 600;
+            white-space: nowrap;
         }
 
         .float-cart-total {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 800;
             color: #fde047;
+            white-space: nowrap;
         }
 
         .btn-float-checkout {
@@ -716,12 +708,19 @@ if ($result_produk) {
             border: none;
             padding: 8px 14px;
             border-radius: 10px;
-            font-size: 12.5px;
+            font-size: 12px;
             font-weight: 800;
             cursor: pointer;
             display: flex;
             align-items: center;
             gap: 4px;
+            white-space: nowrap;
+            flex-shrink: 0;
+            box-shadow: 0 4px 10px rgba(234, 88, 12, 0.4);
+        }
+
+        .btn-float-checkout:active {
+            transform: scale(0.97);
         }
 
         /* Modal Struk Nota Belanja */
@@ -737,7 +736,7 @@ if ($result_produk) {
             align-items: center;
             justify-content: center;
             z-index: 999;
-            padding: 12px;
+            padding: 16px;
         }
 
         .receipt-card {
@@ -746,16 +745,18 @@ if ($result_produk) {
             max-height: 88vh;
             max-height: 88dvh;
             border-radius: var(--radius-lg);
-            padding: 20px 18px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.25);
+            padding: 22px 18px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
             overflow-y: auto;
-            font-family: 'Courier New', Courier, monospace;
+            font-family: 'Courier Prime', 'Courier New', Courier, monospace;
             -webkit-overflow-scrolling: touch;
+            color: #0f172a;
+            border: 1px solid #e2e8f0;
         }
 
         .receipt-header {
             text-align: center;
-            border-bottom: 1px dashed #000;
+            border-bottom: 1.5px dashed #64748b;
             padding-bottom: 10px;
             margin-bottom: 10px;
         }
@@ -763,33 +764,79 @@ if ($result_produk) {
         .receipt-header h3 {
             font-size: 17px;
             font-weight: 800;
-            letter-spacing: 1px;
+            letter-spacing: 0.5px;
+            color: #0f172a;
+            margin-bottom: 3px;
         }
 
         .receipt-header p {
             font-size: 11px;
-            line-height: 1.3;
+            line-height: 1.35;
+            color: #475569;
         }
 
         .receipt-meta {
             font-size: 11.5px;
-            border-bottom: 1px dashed #000;
+            border-bottom: 1.5px dashed #64748b;
+            padding-bottom: 8px;
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+
+        .receipt-meta-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2px;
+        }
+
+        .receipt-items-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10.5px;
+            font-weight: 800;
+            text-transform: uppercase;
+            border-bottom: 1px solid #cbd5e1;
+            padding-bottom: 4px;
+            margin-bottom: 6px;
+            color: #475569;
+        }
+
+        .receipt-items {
+            border-bottom: 1.5px dashed #64748b;
             padding-bottom: 8px;
             margin-bottom: 8px;
         }
 
-        .receipt-items {
-            border-bottom: 1px dashed #000;
-            padding-bottom: 8px;
-            margin-bottom: 8px;
+        .receipt-item-row {
+            margin-bottom: 6px;
+        }
+
+        .receipt-item-name {
             font-size: 12px;
+            font-weight: 700;
+            color: #0f172a;
+            line-height: 1.25;
+        }
+
+        .receipt-item-detail {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #475569;
+            margin-top: 1px;
+        }
+
+        .receipt-item-subtotal {
+            font-weight: 700;
+            color: #0f172a;
         }
 
         .receipt-summary {
             font-size: 12px;
-            border-bottom: 1px dashed #000;
+            border-bottom: 1.5px dashed #64748b;
             padding-bottom: 8px;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
 
         .receipt-summary .row {
@@ -798,10 +845,21 @@ if ($result_produk) {
             margin-bottom: 3px;
         }
 
+        .receipt-summary .total-row {
+            font-size: 15px;
+            font-weight: 800;
+            color: #0f172a;
+            margin: 5px 0;
+            padding-top: 5px;
+            border-top: 1px dashed #cbd5e1;
+        }
+
         .receipt-footer {
             text-align: center;
-            font-size: 11px;
+            font-size: 10.5px;
             margin-bottom: 16px;
+            color: #475569;
+            line-height: 1.35;
         }
 
         .modal-actions {
@@ -822,6 +880,15 @@ if ($result_produk) {
             font-weight: 700;
             cursor: pointer;
             min-height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.15s;
+        }
+
+        .btn-print:hover {
+            background: var(--primary-hover);
         }
 
         .btn-close-modal {
@@ -905,6 +972,32 @@ if ($result_produk) {
                 display: inline-flex;
             }
 
+            .mobile-floating-cart {
+                display: none;
+                position: fixed;
+                bottom: max(14px, env(safe-area-inset-bottom, 14px));
+                left: 14px;
+                right: 14px;
+                margin: 0 auto;
+                max-width: 440px;
+                width: calc(100% - 28px);
+                background: #0f172a;
+                color: #ffffff;
+                border-radius: 14px;
+                padding: 9px 14px;
+                box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.12);
+                align-items: center;
+                justify-content: space-between;
+                z-index: 50;
+                cursor: pointer;
+                transition: transform 0.2s ease, opacity 0.2s ease;
+            }
+
+            .mobile-floating-cart.has-items {
+                display: flex !important;
+                animation: slideUpFloat 0.25s ease;
+            }
+
             body.mobile-view-cart .mobile-floating-cart {
                 display: none !important;
             }
@@ -944,6 +1037,13 @@ if ($result_produk) {
             }
         }
 
+        /* Large Screen Media Query - Memastikan bar melayang TIDAK tampil pada layar besar */
+        @media (min-width: 851px) {
+            .mobile-floating-cart {
+                display: none !important;
+            }
+        }
+
         /* Small Phones (< 480px) */
         @media (max-width: 480px) {
             .navbar-brand .brand-logo {
@@ -978,22 +1078,71 @@ if ($result_produk) {
             }
         }
 
-        /* Print Media Query */
+        /* Print Media Query - Khusus Cetak ke Kertas Struk / Thermal POS Printer */
         @media print {
+            @page {
+                size: auto;
+                margin: 0mm; /* Menghilangkan margin browser bawaan agar pas di kertas struk */
+            }
+
+            html, body {
+                background: #ffffff !important;
+                color: #000000 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                height: auto !important;
+                overflow: visible !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
             body * {
-                visibility: hidden;
+                visibility: hidden !important;
             }
+
+            .modal-overlay {
+                position: static !important;
+                background: transparent !important;
+                backdrop-filter: none !important;
+                padding: 0 !important;
+                display: block !important;
+            }
+
             .receipt-card, .receipt-card * {
-                visibility: visible;
+                visibility: visible !important;
             }
+
             .receipt-card {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                box-shadow: none;
-                padding: 0;
+                position: absolute !important;
+                left: 0 !important;
+                right: 0 !important;
+                top: 0 !important;
+                margin: 0 auto !important;
+                width: 100% !important;
+                max-width: 78mm !important; /* Standar ukuran lebar kertas struk thermal 80mm / 58mm */
+                padding: 6mm 4mm 12mm 4mm !important; /* Padding tepi kertas struk */
+                box-shadow: none !important;
+                border: none !important; /* Tanpa border kotak luar khas struk printer rol */
+                border-radius: 0 !important;
+                font-size: 11.5px !important;
+                line-height: 1.35 !important;
+                color: #000000 !important;
+                font-family: 'Courier New', Courier, monospace !important;
             }
+
+            .receipt-header, .receipt-meta, .receipt-items, .receipt-summary {
+                border-color: #000000 !important;
+            }
+
+            .receipt-items-header {
+                border-color: #000000 !important;
+                color: #000000 !important;
+            }
+
+            .receipt-item-detail, .receipt-meta-row {
+                color: #000000 !important;
+            }
+
             .modal-actions {
                 display: none !important;
             }
@@ -1163,10 +1312,10 @@ if ($result_produk) {
         </aside>
     </div>
 
-    <!-- Mobile Floating Checkout Bar (Visible on mobile when items in cart) -->
+    <!-- Mobile Floating Checkout Bar (Hanya tampil pada mobile/tablet saat ada item) -->
     <div class="mobile-floating-cart" id="mobile-floating-cart" onclick="switchKasirView('cart')">
         <div class="float-cart-info">
-            <span class="float-cart-badge"><span id="float-cart-count">0</span> item di keranjang</span>
+            <span class="float-cart-badge">🛒 <span id="float-cart-count">0</span> item di keranjang</span>
             <span class="float-cart-total" id="float-cart-total">Rp 0</span>
         </div>
         <button type="button" class="btn-float-checkout">
@@ -1179,21 +1328,37 @@ if ($result_produk) {
         <div class="receipt-card">
             <div class="receipt-header">
                 <h3>🍗 FILLAH FOOD</h3>
-                <p>Spesialis Ayam Geprek & Kuliner<br>Jl. Gumukmas, Jember - Jawa Timur<br>WhatsApp: 0858-0982-7735</p>
+                <p><strong>SPESIALIS AYAM GEPREK & KULINER</strong><br>
+                Jl. Gumukmas, Jember - Jawa Timur<br>
+                WhatsApp: 0858-0982-7735</p>
             </div>
 
             <div class="receipt-meta">
-                <div style="display: flex; justify-content: space-between;">
-                    <span id="receipt-no-nota">TRX-000000</span>
-                    <span id="receipt-tanggal">25/10/2026</span>
+                <div class="receipt-meta-row">
+                    <span>No. Nota:</span>
+                    <strong id="receipt-no-nota"><?php echo htmlspecialchars($next_no_nota); ?></strong>
                 </div>
-                <div style="display: flex; justify-content: space-between; margin-top: 2px;">
-                    <span>Kasir: <strong id="receipt-kasir">kasir_1</strong></span>
+                <div class="receipt-meta-row">
+                    <span>Waktu:</span>
+                    <span id="receipt-tanggal"><?php echo htmlspecialchars($waktu_sekarang); ?></span>
+                </div>
+                <div class="receipt-meta-row">
+                    <span>Kasir:</span>
+                    <strong id="receipt-kasir"><?php echo htmlspecialchars($_SESSION['username']); ?></strong>
+                </div>
+                <div class="receipt-meta-row">
+                    <span>Layanan:</span>
                     <span id="receipt-meja">Meja 01</span>
                 </div>
-                <div id="receipt-catatan-wrapper" style="margin-top: 2px; font-style: italic; color: #555; display: none;">
-                    Ket: <span id="receipt-catatan"></span>
+                <div id="receipt-catatan-wrapper" class="receipt-meta-row" style="display: none; font-style: italic; color: #475569;">
+                    <span>Catatan:</span>
+                    <span id="receipt-catatan"></span>
                 </div>
+            </div>
+
+            <div class="receipt-items-header">
+                <span>Item Menu</span>
+                <span>Subtotal</span>
             </div>
 
             <div class="receipt-items" id="receipt-items-list">
@@ -1202,22 +1367,32 @@ if ($result_produk) {
 
             <div class="receipt-summary">
                 <div class="row">
-                    <span>Total Belanja:</span>
-                    <span id="receipt-total" style="font-weight: bold;">Rp 0</span>
+                    <span>Subtotal:</span>
+                    <span id="receipt-subtotal-val">Rp 0</span>
                 </div>
                 <div class="row">
-                    <span>Tunai / Bayar:</span>
+                    <span>Pajak Resto (0%):</span>
+                    <span>Rp 0</span>
+                </div>
+                <div class="row total-row">
+                    <span>TOTAL BELANJA:</span>
+                    <span id="receipt-total">Rp 0</span>
+                </div>
+                <div class="row">
+                    <span>Tunai / Diterima:</span>
                     <span id="receipt-bayar">Rp 0</span>
                 </div>
-                <div class="row" style="font-weight: bold;">
+                <div class="row" style="font-weight: 700;">
                     <span>Kembalian:</span>
                     <span id="receipt-kembalian">Rp 0</span>
                 </div>
             </div>
 
             <div class="receipt-footer">
-                <p>Terima kasih atas kunjungan Anda!</p>
-                <p style="margin-top: 2px; font-size: 10px;">Makanan Halal, Nikmat, & Higienis</p>
+                <p>================================</p>
+                <p style="font-weight: 700; margin: 4px 0;">*** TERIMA KASIH ***</p>
+                <p>Makanan Halal, Nikmat, & Higienis</p>
+                <p style="margin-top: 2px;">Kritik & Saran: 0858-0982-7735</p>
             </div>
 
             <div class="modal-actions">

@@ -234,30 +234,41 @@ function prosesBayarDanCetak() {
 // 11. Tampilkan Pop-up Struk Nota
 function bukaModalStruk(data) {
     document.getElementById('receipt-no-nota').textContent = data.no_nota;
-    document.getElementById('receipt-tanggal').textContent = data.tanggal;
+    document.getElementById('receipt-tanggal').textContent = data.tanggal || (new Date().toLocaleString('id-ID') + ' WIB');
     document.getElementById('receipt-kasir').textContent = data.kasir;
     document.getElementById('receipt-meja').textContent = data.no_meja;
 
-    if (data.catatan && data.catatan.trim() !== '') {
-        document.getElementById('receipt-catatan').textContent = data.catatan;
-        document.getElementById('receipt-catatan-wrapper').style.display = 'block';
-    } else {
-        document.getElementById('receipt-catatan-wrapper').style.display = 'none';
+    const catatanWrapper = document.getElementById('receipt-catatan-wrapper');
+    if (catatanWrapper) {
+        if (data.catatan && data.catatan.trim() !== '') {
+            document.getElementById('receipt-catatan').textContent = data.catatan;
+            catatanWrapper.style.display = 'flex';
+        } else {
+            catatanWrapper.style.display = 'none';
+        }
     }
 
     const itemsList = document.getElementById('receipt-items-list');
     itemsList.innerHTML = '';
-    data.rincian.forEach(item => {
-        const row = document.createElement('div');
-        row.style.display = 'flex';
-        row.style.justifyContent = 'space-between';
-        row.style.marginBottom = '3px';
-        row.innerHTML = `
-            <span>${item.nama} x${item.qty}</span>
-            <span>${formatRupiah(item.harga * item.qty)}</span>
-        `;
-        itemsList.appendChild(row);
-    });
+    if (data.rincian && Array.isArray(data.rincian)) {
+        data.rincian.forEach(item => {
+            const row = document.createElement('div');
+            row.className = 'receipt-item-row';
+            row.innerHTML = `
+                <div class="receipt-item-name">${item.nama}</div>
+                <div class="receipt-item-detail">
+                    <span>${item.qty} x ${formatRupiah(item.harga)}</span>
+                    <span class="receipt-item-subtotal">${formatRupiah(item.harga * item.qty)}</span>
+                </div>
+            `;
+            itemsList.appendChild(row);
+        });
+    }
+
+    const subtotalEl = document.getElementById('receipt-subtotal-val');
+    if (subtotalEl) {
+        subtotalEl.textContent = formatRupiah(data.total_bayar);
+    }
 
     document.getElementById('receipt-total').textContent = formatRupiah(data.total_bayar);
     document.getElementById('receipt-bayar').textContent = formatRupiah(data.uang_diterima);
