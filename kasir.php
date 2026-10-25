@@ -1,6 +1,6 @@
 <?php
 require 'auth_check.php';
-protect_page(['Kasir', 'Admin', 'Owner']);
+protect_page(['User', 'Kasir', 'Admin', 'Owner']);
 require 'config.php';
 
 // Ambil seluruh daftar produk aktif dari database

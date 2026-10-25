@@ -27,7 +27,7 @@ $pesan_error = "";
 $tab_aktif = isset($_GET['tab']) ? trim($_GET['tab']) : 'dashboard';
 if (isset($_POST['tambah_pengguna']) || isset($_POST['edit_pengguna']) || isset($_POST['hapus_pengguna'])) {
     $tab_aktif = 'pengguna';
-} elseif (isset($_POST['ubah_peran_pengguna'])) {
+} elseif (isset($_POST['tambah_peran']) || isset($_POST['edit_peran']) || isset($_POST['hapus_peran']) || isset($_POST['ubah_peran_pengguna'])) {
     $tab_aktif = 'peran';
 } elseif (isset($_POST['simpan_setting_user']) || isset($_POST['simpan_profil_saya'])) {
     $tab_aktif = 'user-setting';
@@ -44,6 +44,32 @@ $chk_produk = $conn->query("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE
 if ($chk_produk === 0) $conn->query("ALTER TABLE produk ADD COLUMN gambar VARCHAR(255) NULL");
 $chk_bahan = $conn->query("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='$db_name' AND TABLE_NAME='bahan_baku' AND COLUMN_NAME='gambar'")->num_rows;
 if ($chk_bahan === 0) $conn->query("ALTER TABLE bahan_baku ADD COLUMN gambar VARCHAR(255) NULL");
+
+// --- Migrasi Otomatis: Tabel roles & kolom role dinamis pada users ---
+$chk_roles = $conn->query("SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='$db_name' AND TABLE_NAME='roles'")->num_rows;
+if ($chk_roles === 0) {
+    $conn->query("CREATE TABLE roles (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        nama_peran VARCHAR(50) NOT NULL UNIQUE,
+        deskripsi VARCHAR(255) NOT NULL,
+        akses_pos TINYINT(1) DEFAULT 1,
+        akses_dashboard TINYINT(1) DEFAULT 0,
+        akses_stok TINYINT(1) DEFAULT 0,
+        akses_menu TINYINT(1) DEFAULT 0,
+        akses_pengguna TINYINT(1) DEFAULT 0,
+        dibuat_pada TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )");
+    $conn->query("INSERT INTO roles (nama_peran, deskripsi, akses_pos, akses_dashboard, akses_stok, akses_menu, akses_pengguna) VALUES
+        ('Owner', 'Pemilik Usaha - Hak akses penuh seluruh sistem, finansial, dan pengguna', 1, 1, 1, 1, 1),
+        ('Admin', 'Staf Persediaan - Pengelolaan stok bahan baku, belanja persediaan, dan menu', 1, 1, 1, 1, 0),
+        ('User', 'Pengguna Operasional - Hak akses transaksi kasir POS dan cetak nota struk', 1, 0, 0, 0, 0)
+    ");
+}
+$col_info = $conn->query("SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='$db_name' AND TABLE_NAME='users' AND COLUMN_NAME='role'")->fetch_assoc();
+if ($col_info && strtolower($col_info['DATA_TYPE']) === 'enum') {
+    $conn->query("ALTER TABLE users MODIFY COLUMN role VARCHAR(50) NOT NULL DEFAULT 'User'");
+    $conn->query("UPDATE users SET role = 'User' WHERE role = 'Kasir'");
+}
 
 // Helper: Proses Upload Gambar (opsional)
 if (!function_exists('prosesUploadGambar')) {
@@ -262,13 +288,116 @@ if (is_owner()) {
         }
     }
 
-    // 2f. Ubah Peran Hak Akses (Khusus Tab Peran / RBAC)
+    // 2f. Tambah Peran Baru (Khusus Tab Peran)
+    if (isset($_POST['tambah_peran'])) {
+        $nama_peran = trim($_POST['nama_peran']);
+        $deskripsi  = trim($_POST['deskripsi']);
+        $akses_pos  = isset($_POST['akses_pos']) ? 1 : 0;
+        $akses_dash = isset($_POST['akses_dashboard']) ? 1 : 0;
+        $akses_stok = isset($_POST['akses_stok']) ? 1 : 0;
+        $akses_menu = isset($_POST['akses_menu']) ? 1 : 0;
+        $akses_peng = isset($_POST['akses_pengguna']) ? 1 : 0;
+
+        if (empty($nama_peran)) {
+            $pesan_error = "Nama peran tidak boleh kosong!";
+        } else {
+            $cek = $conn->prepare("SELECT id FROM roles WHERE LOWER(nama_peran) = LOWER(?)");
+            $cek->bind_param("s", $nama_peran);
+            $cek->execute();
+            if ($cek->get_result()->num_rows > 0) {
+                $pesan_error = "Peran '$nama_peran' sudah terdaftar di sistem!";
+            } else {
+                $ins = $conn->prepare("INSERT INTO roles (nama_peran, deskripsi, akses_pos, akses_dashboard, akses_stok, akses_menu, akses_pengguna) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                $ins->bind_param("ssiiiii", $nama_peran, $deskripsi, $akses_pos, $akses_dash, $akses_stok, $akses_menu, $akses_peng);
+                if ($ins->execute()) {
+                    $pesan_sukses = "Peran baru '$nama_peran' berhasil ditambahkan ke daftar peran!";
+                } else {
+                    $pesan_error = "Gagal menambahkan peran baru: " . $conn->error;
+                }
+            }
+        }
+    }
+
+    // 2g. Edit Peran (Khusus Tab Peran)
+    if (isset($_POST['edit_peran'])) {
+        $id_role    = intval($_POST['id_role']);
+        $nama_peran = trim($_POST['nama_peran']);
+        $deskripsi  = trim($_POST['deskripsi']);
+        $akses_pos  = isset($_POST['akses_pos']) ? 1 : 0;
+        $akses_dash = isset($_POST['akses_dashboard']) ? 1 : 0;
+        $akses_stok = isset($_POST['akses_stok']) ? 1 : 0;
+        $akses_menu = isset($_POST['akses_menu']) ? 1 : 0;
+        $akses_peng = isset($_POST['akses_pengguna']) ? 1 : 0;
+
+        if (empty($nama_peran)) {
+            $pesan_error = "Nama peran tidak boleh kosong!";
+        } else {
+            $q_old = $conn->prepare("SELECT nama_peran FROM roles WHERE id = ?");
+            $q_old->bind_param("i", $id_role);
+            $q_old->execute();
+            $old_role = $q_old->get_result()->fetch_assoc()['nama_peran'] ?? '';
+
+            // Peran Owner selalu memiliki hak akses penuh untuk integritas sistem
+            if ($old_role === 'Owner') {
+                $nama_peran = 'Owner';
+                $akses_pos = 1; $akses_dash = 1; $akses_stok = 1; $akses_menu = 1; $akses_peng = 1;
+            }
+
+            $stmt_up = $conn->prepare("UPDATE roles SET nama_peran = ?, deskripsi = ?, akses_pos = ?, akses_dashboard = ?, akses_stok = ?, akses_menu = ?, akses_pengguna = ? WHERE id = ?");
+            $stmt_up->bind_param("ssiiiiii", $nama_peran, $deskripsi, $akses_pos, $akses_dash, $akses_stok, $akses_menu, $akses_peng, $id_role);
+            if ($stmt_up->execute()) {
+                if (!empty($old_role) && $old_role !== $nama_peran) {
+                    $up_u = $conn->prepare("UPDATE users SET role = ? WHERE role = ?");
+                    $up_u->bind_param("ss", $nama_peran, $old_role);
+                    $up_u->execute();
+                    if ($_SESSION['role'] === $old_role) {
+                        $_SESSION['role'] = $nama_peran;
+                    }
+                }
+                $pesan_sukses = "Data peran '$nama_peran' berhasil diperbarui!";
+            } else {
+                $pesan_error = "Gagal memperbarui peran: " . $conn->error;
+            }
+        }
+    }
+
+    // 2h. Hapus Peran (Khusus Tab Peran)
+    if (isset($_POST['hapus_peran'])) {
+        $id_role = intval($_POST['id_role_hapus']);
+        $q_chk = $conn->prepare("SELECT nama_peran FROM roles WHERE id = ?");
+        $q_chk->bind_param("i", $id_role);
+        $q_chk->execute();
+        $r_chk = $q_chk->get_result()->fetch_assoc();
+        $nama_del = $r_chk['nama_peran'] ?? '';
+
+        if (in_array($nama_del, ['Owner', 'Admin', 'User'])) {
+            $pesan_error = "Peran inti sistem ('$nama_del') tidak dapat dihapus!";
+        } else {
+            $cek_u = $conn->prepare("SELECT COUNT(*) AS total FROM users WHERE role = ?");
+            $cek_u->bind_param("s", $nama_del);
+            $cek_u->execute();
+            $tot_u = $cek_u->get_result()->fetch_assoc()['total'];
+            if ($tot_u > 0) {
+                $pesan_error = "Tidak dapat menghapus peran '$nama_del' karena sedang digunakan oleh $tot_u akun pengguna!";
+            } else {
+                $stmt_del = $conn->prepare("DELETE FROM roles WHERE id = ?");
+                $stmt_del->bind_param("i", $id_role);
+                if ($stmt_del->execute()) {
+                    $pesan_sukses = "Peran '$nama_del' berhasil dihapus dari daftar peran.";
+                } else {
+                    $pesan_error = "Gagal menghapus peran: " . $conn->error;
+                }
+            }
+        }
+    }
+
+    // 2i. Ubah Peran Pengguna Cepat
     if (isset($_POST['ubah_peran_pengguna'])) {
         $id_target   = intval($_POST['id_user_peran']);
         $role_target = trim($_POST['role_baru']);
 
-        if (!in_array($role_target, ['Owner', 'Admin', 'Kasir'])) {
-            $pesan_error = "Peran (role) yang dipilih tidak valid!";
+        if (empty($role_target)) {
+            $pesan_error = "Peran yang dipilih tidak valid!";
         } else {
             if (isset($_SESSION['id_user']) && $_SESSION['id_user'] == $id_target && $role_target !== 'Owner') {
                 $pesan_error = "Anda tidak dapat menurunkan peran akun Anda sendiri yang sedang aktif!";
@@ -319,16 +448,37 @@ if ($res_trx) {
     }
 }
 
-// 4. Ambil Seluruh Data Pengguna (Khusus Role Owner)
+// 4. Ambil Data Pengguna & Peran (Khusus Role Owner)
 $users_list = [];
+$roles_list = [];
+$role_user_counts = [];
 $current_user_email = "";
+
 if (is_owner()) {
-    $res_users = $conn->query("SELECT id, username, nama_lengkap, email, role FROM users ORDER BY FIELD(role, 'Owner', 'Admin', 'Kasir'), id ASC");
+    $res_users = $conn->query("SELECT id, username, nama_lengkap, email, role FROM users ORDER BY FIELD(role, 'Owner', 'Admin', 'User'), id ASC");
     if ($res_users) {
         while ($u = $res_users->fetch_assoc()) {
             $users_list[] = $u;
         }
     }
+
+    $res_roles = $conn->query("SELECT * FROM roles ORDER BY id ASC");
+    if ($res_roles) {
+        while ($r = $res_roles->fetch_assoc()) {
+            $roles_list[] = $r;
+            $role_user_counts[$r['nama_peran']] = 0;
+        }
+    }
+
+    foreach ($users_list as $u) {
+        $r_name = ($u['role'] === 'Kasir') ? 'User' : $u['role'];
+        if (isset($role_user_counts[$r_name])) {
+            $role_user_counts[$r_name]++;
+        } else {
+            $role_user_counts[$r_name] = 1;
+        }
+    }
+
     if (isset($_SESSION['id_user'])) {
         $stmt_cu = $conn->prepare("SELECT email FROM users WHERE id = ?");
         $stmt_cu->bind_param("i", $_SESSION['id_user']);
@@ -336,14 +486,6 @@ if (is_owner()) {
         $r_cu = $stmt_cu->get_result()->fetch_assoc();
         if ($r_cu && !empty($r_cu['email'])) {
             $current_user_email = $r_cu['email'];
-        }
-    }
-
-    // Hitung distribusi pengguna per peran untuk tab Peran & Hak Akses
-    $role_counts = ['Owner' => 0, 'Admin' => 0, 'Kasir' => 0];
-    foreach ($users_list as $u) {
-        if (isset($role_counts[$u['role']])) {
-            $role_counts[$u['role']]++;
         }
     }
 }
@@ -859,10 +1001,16 @@ if (is_owner()) {
             border: 1px solid #bae6fd;
         }
 
-        .badge-role-kasir {
+        .badge-role-kasir, .badge-role-user {
             background: #dcfce7;
             color: #15803d;
             border: 1px solid #bbf7d0;
+        }
+
+        .badge-role-custom {
+            background: #f3e8ff;
+            color: #7e22ce;
+            border: 1px solid #e9d5ff;
         }
 
         /* Form Modal Input Stok */
@@ -1400,15 +1548,20 @@ if (is_owner()) {
                                             <span class="badge badge-role-owner">👑 Owner</span>
                                         <?php elseif ($u['role'] === 'Admin'): ?>
                                             <span class="badge badge-role-admin">⚙️ Admin</span>
-                                        <?php else: ?>
+                                        <?php elseif ($u['role'] === 'User'): ?>
+                                            <span class="badge badge-role-user">👤 User</span>
+                                        <?php elseif ($u['role'] === 'Kasir'): ?>
                                             <span class="badge badge-role-kasir">🛒 Kasir</span>
+                                        <?php else: ?>
+                                            <span class="badge badge-role-custom">🛡️ <?php echo htmlspecialchars($u['role']); ?></span>
                                         <?php endif; ?>
                                     </td>
                                     <td style="font-size: 12px; color: var(--text-muted);">
                                         <?php 
                                             if ($u['role'] === 'Owner') echo 'Semua Layar + Kelola Pengguna';
                                             elseif ($u['role'] === 'Admin') echo 'Dashboard & Stok Bahan (admin.php, kasir.php)';
-                                            else echo 'Hanya Layar Kasir POS (kasir.php)';
+                                            elseif ($u['role'] === 'User' || $u['role'] === 'Kasir') echo 'Hanya Layar Kasir POS (kasir.php)';
+                                            else echo 'Sesuai Wewenang Peran Khusus';
                                         ?>
                                     </td>
                                     <td>
@@ -1445,169 +1598,150 @@ if (is_owner()) {
 
         <!-- TAB VIEW 2b: PERAN & HAK AKSES (Khusus Role Owner) -->
         <div id="view-peran" class="tab-view" style="<?php echo ($tab_aktif === 'peran') ? '' : 'display: none;'; ?>">
-            <!-- 1. Ringkasan Peran & Distribusi Pengguna -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 22px;">
-                <div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 14px; padding: 18px;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="font-size: 22px;">👑</span>
-                            <strong style="font-size: 14px; color: #b45309;">Pemilik Usaha (Owner)</strong>
-                        </div>
-                        <span class="badge badge-role-owner" style="font-weight: 800;"><?php echo $role_counts['Owner']; ?> Akun</span>
+            <!-- 1. Daftar Peran Pengguna (RBAC) -->
+            <div class="panel-card" style="margin-bottom: 22px;">
+                <div class="panel-header" style="border-bottom: 1.5px solid var(--border); padding-bottom: 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                    <div>
+                        <h2><span>🛡️</span> Daftar Peran & Hak Akses (RBAC)</h2>
+                        <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                            Daftar peran sistem UMKM Fillah Food beserta rincian wewenang hak akses modul operasional.
+                        </p>
                     </div>
-                    <p style="font-size: 12px; color: #78350f; line-height: 1.5; margin: 0;">
-                        Hak Akses Penuh: Kontrol absolut terhadap data omzet, penetapan harga, resep bahan baku, manajemen seluruh akun staf, dan konfigurasi hak akses peran.
-                    </p>
+                    <button type="button" class="btn-primary-sm" onclick="bukaModalPeranBaru()" style="padding: 10px 16px; font-size: 12.5px; font-weight: 700;">
+                        ➕ Tambah Peran Baru
+                    </button>
                 </div>
 
-                <div style="background: #f0f9ff; border: 1.5px solid #bae6fd; border-radius: 14px; padding: 18px;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="font-size: 22px;">⚙️</span>
-                            <strong style="font-size: 14px; color: #0369a1;">Staf Persediaan (Admin)</strong>
-                        </div>
-                        <span class="badge badge-role-admin" style="font-weight: 800;"><?php echo $role_counts['Admin']; ?> Akun</span>
-                    </div>
-                    <p style="font-size: 12px; color: #075985; line-height: 1.5; margin: 0;">
-                        Hak Akses Persediaan & Menu: Pencatatan pasokan stok bahan baku masuk, pendaftaran bahan baru, manajemen daftar menu produk, dan akses pendukung layar kasir.
-                    </p>
-                </div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 140px;">Nama Peran</th>
+                                <th>Deskripsi / Tanggung Jawab</th>
+                                <th>Hak Akses Modul</th>
+                                <th style="text-align: center; width: 110px;">Pengguna</th>
+                                <th style="text-align: center; width: 140px;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($roles_list as $r): 
+                                $r_count = $role_user_counts[$r['nama_peran']] ?? 0;
+                            ?>
+                                <tr>
+                                    <td>
+                                        <?php if ($r['nama_peran'] === 'Owner'): ?>
+                                            <span class="badge badge-role-owner" style="font-size: 12px; font-weight: 800;">👑 Owner</span>
+                                        <?php elseif ($r['nama_peran'] === 'Admin'): ?>
+                                            <span class="badge badge-role-admin" style="font-size: 12px; font-weight: 800;">⚙️ Admin</span>
+                                        <?php elseif ($r['nama_peran'] === 'User'): ?>
+                                            <span class="badge badge-role-user" style="font-size: 12px; font-weight: 800;">👤 User</span>
+                                        <?php else: ?>
+                                            <span class="badge badge-role-custom" style="font-size: 12px; font-weight: 800;">🛡️ <?php echo htmlspecialchars($r['nama_peran']); ?></span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <div style="font-size: 13px; font-weight: 600; color: var(--text-dark);">
+                                            <?php echo htmlspecialchars($r['deskripsi']); ?>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                                            <?php if ($r['akses_pos']): ?>
+                                                <span class="badge badge-safe" style="font-size: 10.5px;">✓ POS Kasir</span>
+                                            <?php endif; ?>
+                                            <?php if ($r['akses_dashboard']): ?>
+                                                <span class="badge badge-safe" style="font-size: 10.5px;">✓ Dashboard</span>
+                                            <?php endif; ?>
+                                            <?php if ($r['akses_stok']): ?>
+                                                <span class="badge badge-safe" style="font-size: 10.5px;">✓ Stok Masuk</span>
+                                            <?php endif; ?>
+                                            <?php if ($r['akses_menu']): ?>
+                                                <span class="badge badge-safe" style="font-size: 10.5px;">✓ Kelola Menu</span>
+                                            <?php endif; ?>
+                                            <?php if ($r['akses_pengguna']): ?>
+                                                <span class="badge badge-safe" style="font-size: 10.5px;">✓ Kelola Pengguna</span>
+                                            <?php endif; ?>
+                                            <?php if (!$r['akses_pos'] && !$r['akses_dashboard'] && !$r['akses_stok'] && !$r['akses_menu'] && !$r['akses_pengguna']): ?>
+                                                <span class="badge badge-danger" style="font-size: 10.5px;">Tidak Ada Akses</span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <span class="badge" style="background: #f1f5f9; color: var(--text-dark); font-weight: 700; border: 1px solid var(--border);">
+                                            <?php echo $r_count; ?> Akun
+                                        </span>
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <div style="display: flex; gap: 6px; justify-content: center;">
+                                            <button type="button" style="background: #f1f5f9; border: 1px solid var(--border); padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 11.5px; font-weight: 700; color: var(--text-dark);"
+                                                onclick="bukaModalEditPeran(<?php echo $r['id']; ?>, '<?php echo addslashes($r['nama_peran']); ?>', '<?php echo addslashes($r['deskripsi']); ?>', <?php echo (int)$r['akses_pos']; ?>, <?php echo (int)$r['akses_dashboard']; ?>, <?php echo (int)$r['akses_stok']; ?>, <?php echo (int)$r['akses_menu']; ?>, <?php echo (int)$r['akses_pengguna']; ?>)">
+                                                ✏️ Edit
+                                            </button>
 
-                <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 14px; padding: 18px;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="font-size: 22px;">🛒</span>
-                            <strong style="font-size: 14px; color: #15803d;">Staf Penjualan (Kasir)</strong>
-                        </div>
-                        <span class="badge badge-role-kasir" style="font-weight: 800;"><?php echo $role_counts['Kasir']; ?> Akun</span>
-                    </div>
-                    <p style="font-size: 12px; color: #14532d; line-height: 1.5; margin: 0;">
-                        Hak Akses POS Transaksi: Pengoperasian mesin kasir POS, pencatatan pesanan makanan/minuman pelanggan, perhitungan diskon & kembalian, serta cetak nota belanja.
-                    </p>
+                                            <?php if (!in_array($r['nama_peran'], ['Owner', 'Admin', 'User'])): ?>
+                                                <form method="POST" action="" onsubmit="return confirm('Apakah Anda yakin ingin menghapus peran <?php echo addslashes($r['nama_peran']); ?>?');" style="display: inline;">
+                                                    <input type="hidden" name="id_role_hapus" value="<?php echo $r['id']; ?>">
+                                                    <button type="submit" name="hapus_peran" style="background: #fee2e2; border: 1px solid #fecaca; color: #dc2626; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 11.5px; font-weight: 700;">
+                                                        🗑️ Hapus
+                                                    </button>
+                                                </form>
+                                            <?php else: ?>
+                                                <span style="font-size: 11px; color: #94a3b8; padding: 5px 4px; font-weight: 600;" title="Peran inti sistem tidak dapat dihapus">🔒 Sistem</span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px;">
-                <!-- 2. Matriks Hak Akses Modul (RBAC Permission Matrix) -->
-                <div class="panel-card" style="grid-column: 1 / -1;">
-                    <div class="panel-header" style="border-bottom: 1.5px solid var(--border); padding-bottom: 14px; margin-bottom: 16px;">
-                        <div>
-                            <h2><span>📋</span> Matriks Hak Akses Modul Sistem (Role Matrix)</h2>
-                            <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
-                                Rincian hak izin akses per modul berdasarkan peran pengguna (RBAC) pada UMKM Fillah Food.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="table-responsive">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Modul & Fitur Sistem</th>
-                                    <th style="text-align: center;">👑 Owner (Pemilik)</th>
-                                    <th style="text-align: center;">⚙️ Admin (Persediaan)</th>
-                                    <th style="text-align: center;">🛒 Kasir (Penjualan)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><strong>Layar Kasir POS (Pencatatan Pesanan & Transaksi)</strong></td>
-                                    <td style="text-align: center;"><span class="badge badge-safe">✅ Diizinkan</span></td>
-                                    <td style="text-align: center;"><span class="badge badge-safe">✅ Diizinkan</span></td>
-                                    <td style="text-align: center;"><span class="badge badge-safe">✅ Diizinkan</span></td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Cetak Struk Nota Pembelian & Perhitungan Bayar</strong></td>
-                                    <td style="text-align: center;"><span class="badge badge-safe">✅ Diizinkan</span></td>
-                                    <td style="text-align: center;"><span class="badge badge-safe">✅ Diizinkan</span></td>
-                                    <td style="text-align: center;"><span class="badge badge-safe">✅ Diizinkan</span></td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Dashboard Ringkasan Omzet & KPI Bisnis</strong></td>
-                                    <td style="text-align: center;"><span class="badge badge-safe">✅ Diizinkan</span></td>
-                                    <td style="text-align: center;"><span class="badge badge-safe">✅ Diizinkan</span></td>
-                                    <td style="text-align: center;"><span class="badge badge-danger">❌ Terkunci</span></td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Pencatatan Pasokan Stok Bahan Masuk (Inbound)</strong></td>
-                                    <td style="text-align: center;"><span class="badge badge-safe">✅ Diizinkan</span></td>
-                                    <td style="text-align: center;"><span class="badge badge-safe">✅ Diizinkan</span></td>
-                                    <td style="text-align: center;"><span class="badge badge-danger">❌ Terkunci</span></td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Tambah Bahan Baku & Upload Foto Bahan</strong></td>
-                                    <td style="text-align: center;"><span class="badge badge-safe">✅ Diizinkan</span></td>
-                                    <td style="text-align: center;"><span class="badge badge-safe">✅ Diizinkan</span></td>
-                                    <td style="text-align: center;"><span class="badge badge-danger">❌ Terkunci</span></td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Tambah Menu Makanan/Minuman & Foto Produk</strong></td>
-                                    <td style="text-align: center;"><span class="badge badge-safe">✅ Diizinkan</span></td>
-                                    <td style="text-align: center;"><span class="badge badge-safe">✅ Diizinkan</span></td>
-                                    <td style="text-align: center;"><span class="badge badge-danger">❌ Terkunci</span></td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Pengelolaan Akun Pengguna & Pendaftaran Staf</strong></td>
-                                    <td style="text-align: center;"><span class="badge badge-safe">✅ Diizinkan</span></td>
-                                    <td style="text-align: center;"><span class="badge badge-danger">❌ Terkunci</span></td>
-                                    <td style="text-align: center;"><span class="badge badge-danger">❌ Terkunci</span></td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Penetapan Peran & Konfigurasi Hak Akses (RBAC)</strong></td>
-                                    <td style="text-align: center;"><span class="badge badge-safe">✅ Diizinkan</span></td>
-                                    <td style="text-align: center;"><span class="badge badge-danger">❌ Terkunci</span></td>
-                                    <td style="text-align: center;"><span class="badge badge-danger">❌ Terkunci</span></td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Hapus Akun Pengguna & Akses Sensitif</strong></td>
-                                    <td style="text-align: center;"><span class="badge badge-safe">✅ Diizinkan</span></td>
-                                    <td style="text-align: center;"><span class="badge badge-danger">❌ Terkunci</span></td>
-                                    <td style="text-align: center;"><span class="badge badge-danger">❌ Terkunci</span></td>
-                                </tr>
-                            </tbody>
-                        </table>
+            <!-- 2. Form Ubah Peran Pengguna Cepat (Role Assignment) -->
+            <div class="panel-card" style="max-width: 600px;">
+                <div class="panel-header" style="border-bottom: 1.5px solid var(--border); padding-bottom: 14px; margin-bottom: 18px;">
+                    <div>
+                        <h2><span>🔄</span> Penetapan Peran Pengguna (Role Assignment)</h2>
+                        <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                            Khusus Owner: Pilih akun staf dan tetapkan peran hak akses yang baru secara terpusat.
+                        </p>
                     </div>
                 </div>
 
-                <!-- 3. Form Ubah Peran Pengguna Cepat (Role Assignment) -->
-                <div class="panel-card" style="grid-column: 1 / -1; max-width: 600px;">
-                    <div class="panel-header" style="border-bottom: 1.5px solid var(--border); padding-bottom: 14px; margin-bottom: 18px;">
-                        <div>
-                            <h2><span>🔄</span> Penetapan Peran Pengguna (Role Assignment)</h2>
-                            <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
-                                Khusus Owner: Pilih akun staf dan tetapkan peran hak akses yang baru secara terpusat.
-                            </p>
-                        </div>
+                <form method="POST" action="">
+                    <div class="form-group">
+                        <label class="form-label">Pilih Akun Pengguna</label>
+                        <select name="id_user_peran" id="peran-pilih-user" class="form-control" required onchange="updatePeranSelect(this.value)">
+                            <?php foreach ($users_list as $u): ?>
+                                <option value="<?php echo $u['id']; ?>" data-role="<?php echo $u['role']; ?>">
+                                    <?php echo htmlspecialchars($u['nama_lengkap'] ?: $u['username']); ?> (@<?php echo htmlspecialchars($u['username']); ?>) — Peran Saat Ini: [<?php echo $u['role']; ?>]
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
 
-                    <form method="POST" action="">
-                        <div class="form-group">
-                            <label class="form-label">Pilih Akun Pengguna</label>
-                            <select name="id_user_peran" id="peran-pilih-user" class="form-control" required onchange="updatePeranSelect(this.value)">
-                                <?php foreach ($users_list as $u): ?>
-                                    <option value="<?php echo $u['id']; ?>" data-role="<?php echo $u['role']; ?>">
-                                        <?php echo htmlspecialchars($u['nama_lengkap'] ?: $u['username']); ?> (@<?php echo htmlspecialchars($u['username']); ?>) — Peran Saat Ini: [<?php echo $u['role']; ?>]
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
+                    <div class="form-group">
+                        <label class="form-label">Tetapkan Peran Baru (Role)</label>
+                        <select name="role_baru" id="peran-role-baru" class="form-control" required>
+                            <?php foreach ($roles_list as $rl): ?>
+                                <option value="<?php echo htmlspecialchars($rl['nama_peran']); ?>">
+                                    <?php 
+                                        if ($rl['nama_peran'] === 'Owner') echo '👑 Owner (Pemilik Usaha - Akses Penuh)';
+                                        elseif ($rl['nama_peran'] === 'Admin') echo '⚙️ Admin (Staf Pengelola Persediaan & Menu)';
+                                        elseif ($rl['nama_peran'] === 'User') echo '👤 User (Staf Operasional / Layar Kasir POS)';
+                                        else echo '🛡️ ' . htmlspecialchars($rl['nama_peran']) . ' (' . htmlspecialchars($rl['deskripsi']) . ')';
+                                    ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
 
-                        <div class="form-group">
-                            <label class="form-label">Tetapkan Peran Baru (Role)</label>
-                            <select name="role_baru" id="peran-role-baru" class="form-control" required>
-                                <option value="Kasir">🛒 Kasir (Hanya Layar Kasir POS)</option>
-                                <option value="Admin">⚙️ Admin (Staf Pengelola Persediaan & Menu)</option>
-                                <option value="Owner">👑 Owner (Pemilik Usaha - Akses Penuh)</option>
-                            </select>
-                        </div>
-
-                        <div style="margin-top: 20px;">
-                            <button type="submit" name="ubah_peran_pengguna" class="btn-primary-sm" style="padding: 12px 20px; font-size: 13px;">
-                                🔄 Perbarui Peran Hak Akses
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                    <div style="margin-top: 20px;">
+                        <button type="submit" name="ubah_peran_pengguna" class="btn-primary-sm" style="padding: 12px 20px; font-size: 13px;">
+                            🔄 Perbarui Peran Hak Akses
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
 
@@ -1662,7 +1796,17 @@ if (is_owner()) {
                         <div class="form-group">
                             <label class="form-label">Peran Hak Akses Akun</label>
                             <div style="padding: 6px 0;">
-                                <span class="badge badge-role-kasir" id="setting-role-badge">🛒 Kasir</span>
+                                <?php 
+                                    $first_role = !empty($users_list) ? $users_list[0]['role'] : 'User';
+                                    if ($first_role === 'Owner'): ?>
+                                        <span class="badge badge-role-owner" id="setting-role-badge">👑 Owner (Pemilik Usaha)</span>
+                                    <?php elseif ($first_role === 'Admin'): ?>
+                                        <span class="badge badge-role-admin" id="setting-role-badge">⚙️ Admin (Staf Persediaan)</span>
+                                    <?php elseif ($first_role === 'User'): ?>
+                                        <span class="badge badge-role-user" id="setting-role-badge">👤 User (Staf Operasional / POS)</span>
+                                    <?php else: ?>
+                                        <span class="badge badge-role-custom" id="setting-role-badge">🛡️ <?php echo htmlspecialchars($first_role); ?></span>
+                                    <?php endif; ?>
                             </div>
                             <small style="color: var(--text-muted); font-size: 11px;">
                                 🔒 Peran akun dikunci di User Setting. Pengaturan peran hanya dapat diubah melalui menu <strong>Pengelolaan Pengguna</strong> atau <strong>Peran</strong>.
@@ -1895,9 +2039,16 @@ if (is_owner()) {
                 <div class="form-group">
                     <label class="form-label">Pilih Peran Hak Akses (Role)</label>
                     <select name="role" class="form-control" required>
-                        <option value="Kasir">🛒 Kasir (Hanya Layar Transaksi POS)</option>
-                        <option value="Admin">⚙️ Admin (Staf Pengelola Persediaan & Menu)</option>
-                        <option value="Owner">👑 Owner (Pemilik Usaha - Akses Penuh)</option>
+                        <?php foreach ($roles_list as $rl): ?>
+                            <option value="<?php echo htmlspecialchars($rl['nama_peran']); ?>" <?php echo ($rl['nama_peran'] === 'User') ? 'selected' : ''; ?>>
+                                <?php 
+                                    if ($rl['nama_peran'] === 'Owner') echo '👑 Owner (Pemilik Usaha - Akses Penuh)';
+                                    elseif ($rl['nama_peran'] === 'Admin') echo '⚙️ Admin (Staf Pengelola Persediaan & Menu)';
+                                    elseif ($rl['nama_peran'] === 'User') echo '👤 User (Staf Operasional / Layar Kasir POS)';
+                                    else echo '🛡️ ' . htmlspecialchars($rl['nama_peran']) . ' (' . htmlspecialchars($rl['deskripsi']) . ')';
+                                ?>
+                            </option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
 
@@ -1934,9 +2085,16 @@ if (is_owner()) {
                 <div class="form-group">
                     <label class="form-label">Peran Hak Akses (Role)</label>
                     <select name="role" id="edit-role" class="form-control" required>
-                        <option value="Kasir">🛒 Kasir (Hanya Layar Transaksi POS)</option>
-                        <option value="Admin">⚙️ Admin (Staf Pengelola Persediaan & Menu)</option>
-                        <option value="Owner">👑 Owner (Pemilik Usaha - Akses Penuh)</option>
+                        <?php foreach ($roles_list as $rl): ?>
+                            <option value="<?php echo htmlspecialchars($rl['nama_peran']); ?>">
+                                <?php 
+                                    if ($rl['nama_peran'] === 'Owner') echo '👑 Owner (Pemilik Usaha - Akses Penuh)';
+                                    elseif ($rl['nama_peran'] === 'Admin') echo '⚙️ Admin (Staf Pengelola Persediaan & Menu)';
+                                    elseif ($rl['nama_peran'] === 'User') echo '👤 User (Staf Operasional / Layar Kasir POS)';
+                                    else echo '🛡️ ' . htmlspecialchars($rl['nama_peran']) . ' (' . htmlspecialchars($rl['deskripsi']) . ')';
+                                ?>
+                            </option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
 
@@ -1948,6 +2106,107 @@ if (is_owner()) {
                 <div class="modal-footer">
                     <button type="submit" name="edit_pengguna" class="btn-primary-sm" style="flex:1; padding:12px;">Simpan Perubahan</button>
                     <button type="button" class="btn-primary-sm" style="background:#cbd5e1; color:#0f172a;" onclick="tutupModalEditPengguna()">Batal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Form Tambah Peran Baru (Khusus Owner) -->
+    <div class="modal-overlay" id="modal-tambah-peran">
+        <div class="modal-box" style="max-width: 500px;">
+            <h3 class="modal-title">🛡️ Tambah Peran Baru</h3>
+            <form method="POST" action="">
+                <div class="form-group">
+                    <label class="form-label">Nama Peran</label>
+                    <input type="text" name="nama_peran" class="form-control" placeholder="Contoh: Supervisor, Barista, Auditor" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Deskripsi / Tanggung Jawab</label>
+                    <input type="text" name="deskripsi" class="form-control" placeholder="Contoh: Mengawasi operasional dan stok harian" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" style="margin-bottom: 8px;">Izin Hak Akses Modul:</label>
+                    <div style="display: flex; flex-direction: column; gap: 8px; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1.5px solid var(--border);">
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                            <input type="checkbox" name="akses_pos" value="1" checked style="width: 16px; height: 16px;">
+                            <span>🛒 Layar Kasir POS (Pencatatan Pesanan & Transaksi)</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                            <input type="checkbox" name="akses_dashboard" value="1" style="width: 16px; height: 16px;">
+                            <span>📊 Dashboard Ringkasan Omzet & KPI Bisnis</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                            <input type="checkbox" name="akses_stok" value="1" style="width: 16px; height: 16px;">
+                            <span>📦 Pencatatan Pasokan Stok Bahan Masuk</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                            <input type="checkbox" name="akses_menu" value="1" style="width: 16px; height: 16px;">
+                            <span>🍗 Manajemen Menu Makanan & Minuman</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                            <input type="checkbox" name="akses_pengguna" value="1" style="width: 16px; height: 16px;">
+                            <span>👥 Pengelolaan Akun Pengguna & Pengaturan</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit" name="tambah_peran" class="btn-primary-sm" style="flex:1; padding:12px;">Simpan Peran Baru</button>
+                    <button type="button" class="btn-primary-sm" style="background:#cbd5e1; color:#0f172a;" onclick="tutupModalPeranBaru()">Batal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Form Edit Peran (Khusus Owner) -->
+    <div class="modal-overlay" id="modal-edit-peran">
+        <div class="modal-box" style="max-width: 500px;">
+            <h3 class="modal-title">✏️ Edit Data Peran & Hak Akses</h3>
+            <form method="POST" action="">
+                <input type="hidden" name="id_role" id="edit-id-role">
+
+                <div class="form-group">
+                    <label class="form-label">Nama Peran</label>
+                    <input type="text" name="nama_peran" id="edit-nama-peran" class="form-control" required>
+                    <small id="edit-peran-hint" style="color: var(--text-muted); font-size: 11px;"></small>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Deskripsi / Tanggung Jawab</label>
+                    <input type="text" name="deskripsi" id="edit-deskripsi-peran" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" style="margin-bottom: 8px;">Izin Hak Akses Modul:</label>
+                    <div style="display: flex; flex-direction: column; gap: 8px; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1.5px solid var(--border);">
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                            <input type="checkbox" name="akses_pos" id="edit-akses-pos" value="1" style="width: 16px; height: 16px;">
+                            <span>🛒 Layar Kasir POS (Pencatatan Pesanan & Transaksi)</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                            <input type="checkbox" name="akses_dashboard" id="edit-akses-dash" value="1" style="width: 16px; height: 16px;">
+                            <span>📊 Dashboard Ringkasan Omzet & KPI Bisnis</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                            <input type="checkbox" name="akses_stok" id="edit-akses-stok" value="1" style="width: 16px; height: 16px;">
+                            <span>📦 Pencatatan Pasokan Stok Bahan Masuk</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                            <input type="checkbox" name="akses_menu" id="edit-akses-menu" value="1" style="width: 16px; height: 16px;">
+                            <span>🍗 Manajemen Menu Makanan & Minuman</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                            <input type="checkbox" name="akses_pengguna" id="edit-akses-peng" value="1" style="width: 16px; height: 16px;">
+                            <span>👥 Pengelolaan Akun Pengguna & Pengaturan</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit" name="edit_peran" class="btn-primary-sm" style="flex:1; padding:12px;">Simpan Perubahan Peran</button>
+                    <button type="button" class="btn-primary-sm" style="background:#cbd5e1; color:#0f172a;" onclick="tutupModalEditPeran()">Batal</button>
                 </div>
             </form>
         </div>
@@ -2006,6 +2265,46 @@ if (is_owner()) {
             if (el) el.style.display = 'none';
         }
 
+        function bukaModalPeranBaru() {
+            var el = document.getElementById('modal-tambah-peran');
+            if (el) el.style.display = 'flex';
+        }
+
+        function tutupModalPeranBaru() {
+            var el = document.getElementById('modal-tambah-peran');
+            if (el) el.style.display = 'none';
+        }
+
+        function bukaModalEditPeran(id, nama, deskripsi, pos, dash, stok, menu, peng) {
+            document.getElementById('edit-id-role').value = id;
+            var namaInput = document.getElementById('edit-nama-peran');
+            var hintInput = document.getElementById('edit-peran-hint');
+            namaInput.value = nama;
+            if (nama === 'Owner') {
+                namaInput.readOnly = true;
+                namaInput.style.background = '#f1f5f9';
+                if (hintInput) hintInput.textContent = '🔒 Peran Owner memiliki wewenang penuh dan nama tidak dapat diubah.';
+            } else {
+                namaInput.readOnly = false;
+                namaInput.style.background = '#ffffff';
+                if (hintInput) hintInput.textContent = '';
+            }
+            document.getElementById('edit-deskripsi-peran').value = deskripsi;
+            document.getElementById('edit-akses-pos').checked = (pos == 1);
+            document.getElementById('edit-akses-dash').checked = (dash == 1);
+            document.getElementById('edit-akses-stok').checked = (stok == 1);
+            document.getElementById('edit-akses-menu').checked = (menu == 1);
+            document.getElementById('edit-akses-peng').checked = (peng == 1);
+
+            var el = document.getElementById('modal-edit-peran');
+            if (el) el.style.display = 'flex';
+        }
+
+        function tutupModalEditPeran() {
+            var el = document.getElementById('modal-edit-peran');
+            if (el) el.style.display = 'none';
+        }
+
         function isiStokCepat(id, nama, satuan) {
             document.getElementById('select-id-bahan').value = id;
             document.getElementById('satuan-label').textContent = satuan;
@@ -2055,9 +2354,15 @@ if (is_owner()) {
                 } else if (u.role === 'Admin') {
                     roleBadge.className = 'badge badge-role-admin';
                     roleBadge.textContent = '⚙️ Admin (Staf Persediaan)';
-                } else {
+                } else if (u.role === 'User') {
+                    roleBadge.className = 'badge badge-role-user';
+                    roleBadge.textContent = '👤 User (Staf Operasional / POS)';
+                } else if (u.role === 'Kasir') {
                     roleBadge.className = 'badge badge-role-kasir';
                     roleBadge.textContent = '🛒 Kasir (Layar Kasir POS)';
+                } else {
+                    roleBadge.className = 'badge badge-role-custom';
+                    roleBadge.textContent = '🛡️ ' + u.role;
                 }
             }
         }

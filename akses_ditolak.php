@@ -166,7 +166,7 @@ $role     = isset($_SESSION['role']) ? htmlspecialchars($_SESSION['role']) : '-'
         </div>
 
         <div class="actions">
-            <?php if ($role === 'Kasir'): ?>
+            <?php if ($role === 'Kasir' || $role === 'User'): ?>
                 <a href="kasir.php" class="btn btn-primary">🛒 Kembali ke Layar Kasir</a>
             <?php else: ?>
                 <a href="index.php" class="btn btn-primary">🏠 Ke Halaman Login</a>
