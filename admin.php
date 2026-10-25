@@ -48,6 +48,23 @@ if (isset($_POST['tambah_bahan_baru'])) {
     }
 }
 
+// 2b. Logika Tambah Menu Produk Baru (Makanan / Minuman)
+if (isset($_POST['tambah_produk_baru'])) {
+    $nama_produk = trim($_POST['nama_produk']);
+    $harga = floatval($_POST['harga']);
+    $kategori = trim($_POST['kategori']);
+
+    if (!empty($nama_produk) && $harga > 0) {
+        $stmt_p = $conn->prepare("INSERT INTO produk (nama_produk, harga, kategori) VALUES (?, ?, ?)");
+        $stmt_p->bind_param("sds", $nama_produk, $harga, $kategori);
+        if ($stmt_p->execute()) {
+            $pesan_sukses = "Menu produk baru '$nama_produk' berhasil ditambahkan ke daftar kasir!";
+        } else {
+            $pesan_error = "Gagal menambahkan menu produk: " . $conn->error;
+        }
+    }
+}
+
 // 3. Ambil Data Metrik KPI
 // Omzet Hari Ini
 $q_today = $conn->query("SELECT COALESCE(SUM(total_pembayaran), 0) AS omzet_today, COUNT(*) AS trx_today FROM transaksi WHERE DATE(tanggal_transaksi) = CURDATE()");
@@ -639,8 +656,9 @@ if ($res_trx) {
                     <div class="panel-header">
                         <h2><span>📦</span> Persediaan Bahan Baku (Inventory)</h2>
                         <div style="display: flex; gap: 8px;">
-                            <button class="btn-primary-sm" onclick="bukaModalStokMasuk()">+ Stok Masuk Belanja</button>
-                            <button class="btn-primary-sm" style="background:#475569;" onclick="bukaModalBahanBaru()">+ Bahan Baru</button>
+                            <button class="btn-primary-sm" style="background:var(--secondary); color:#000;" onclick="bukaModalProdukBaru()">+ Menu Produk Baru</button>
+                            <button class="btn-primary-sm" onclick="bukaModalStokMasuk()">+ Stok Masuk</button>
+                            <button class="btn-primary-sm" style="background:#475569;" onclick="bukaModalBahanBaru()">+ Bahan Baku</button>
                         </div>
                     </div>
 
@@ -810,6 +828,37 @@ if ($res_trx) {
         </div>
     </div>
 
+    <!-- Modal Form Tambah Menu Produk Baru -->
+    <div class="modal-overlay" id="modal-produk-baru">
+        <div class="modal-box">
+            <h3 class="modal-title">🍗 Tambah Menu Makanan / Minuman Baru</h3>
+            <form method="POST" action="">
+                <div class="form-group">
+                    <label class="form-label">Nama Menu Makanan / Minuman</label>
+                    <input type="text" name="nama_produk" class="form-control" placeholder="Contoh: Ayam Bakar Madu" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Kategori Menu</label>
+                    <select name="kategori" class="form-control" required>
+                        <option value="Makanan">Makanan</option>
+                        <option value="Minuman">Minuman</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Harga Jual Satuan (Rp)</label>
+                    <input type="number" step="500" name="harga" class="form-control" placeholder="Contoh: 12000" required>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit" name="tambah_produk_baru" class="btn-primary-sm" style="flex:1; padding:12px;">Simpan Menu Baru</button>
+                    <button type="button" class="btn-primary-sm" style="background:#cbd5e1; color:#0f172a;" onclick="tutupModalProdukBaru()">Batal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         function bukaModalStokMasuk() {
             document.getElementById('modal-stok-masuk').style.display = 'flex';
@@ -825,6 +874,14 @@ if ($res_trx) {
 
         function tutupModalBahanBaru() {
             document.getElementById('modal-bahan-baru').style.display = 'none';
+        }
+
+        function bukaModalProdukBaru() {
+            document.getElementById('modal-produk-baru').style.display = 'flex';
+        }
+
+        function tutupModalProdukBaru() {
+            document.getElementById('modal-produk-baru').style.display = 'none';
         }
 
         function isiStokCepat(id, nama, satuan) {

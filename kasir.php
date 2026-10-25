@@ -759,7 +759,7 @@ if ($result_produk) {
                             <h3 class="product-name"><?php echo htmlspecialchars($p['nama_produk']); ?></h3>
                             <div class="product-price">Rp <?php echo number_format($p['harga'], 0, ',', '.'); ?></div>
                             
-                            <button class="btn-add-item" type="button">
+                            <button class="btn-add-item" type="button" style="pointer-events: none;">
                                 <span>+</span> Tambah ke Pesanan
                             </button>
                         </div>
@@ -901,6 +901,6 @@ if ($result_produk) {
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=<?php echo time(); ?>"></script>
 </body>
 </html>

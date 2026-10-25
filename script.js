@@ -23,6 +23,10 @@ function tambahItem(id_menu, nama, harga) {
     renderKeranjang();
 }
 
+// Kompatibilitas fungsi
+window.tambahItem = tambahItem;
+window.tambahPesanan = tambahItem;
+
 // 2. Ubah Jumlah Porsi (Stepper)
 function ubahQty(id_menu, delta) {
     const index = keranjang.findIndex(item => item.id_menu === id_menu);
