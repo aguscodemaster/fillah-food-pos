@@ -124,3 +124,15 @@ CREATE TABLE IF NOT EXISTS detail_transaksi (
     FOREIGN KEY (id_transaksi) REFERENCES transaksi(id) ON DELETE CASCADE,
     FOREIGN KEY (id_menu) REFERENCES produk(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
+
+-- 8. Tabel Riwayat Mutasi Stok (Inbound Kulakan & Outbound Kerusakan/Basi)
+CREATE TABLE IF NOT EXISTS riwayat_stok (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    id_bahan INT NOT NULL,
+    tipe ENUM('masuk', 'keluar_rusak', 'keluar_penjualan') NOT NULL,
+    jumlah DECIMAL(10,2) NOT NULL,
+    keterangan VARCHAR(255) NULL,
+    dicatat_oleh VARCHAR(100) NULL,
+    waktu TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_bahan) REFERENCES bahan_baku(id) ON DELETE CASCADE
+) ENGINE=InnoDB;

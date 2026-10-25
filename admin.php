@@ -30,7 +30,7 @@ if ((!isset($_SESSION['id_user']) || $_SESSION['id_user'] == 3 || !isset($_SESSI
 $pesan_sukses = "";
 $pesan_error = "";
 
-// Status Tab Aktif (Dashboard, Pengguna, Peran, atau User Setting)
+// Status Tab Aktif (Dashboard, Produk, Stok, Pengguna, Peran, atau User Setting)
 $tab_aktif = isset($_GET['tab']) ? trim($_GET['tab']) : 'dashboard';
 if (isset($_POST['tambah_pengguna']) || isset($_POST['edit_pengguna']) || isset($_POST['hapus_pengguna'])) {
     $tab_aktif = 'pengguna';
@@ -38,8 +38,10 @@ if (isset($_POST['tambah_pengguna']) || isset($_POST['edit_pengguna']) || isset(
     $tab_aktif = 'peran';
 } elseif (isset($_POST['simpan_setting_user']) || isset($_POST['simpan_profil_saya'])) {
     $tab_aktif = 'user-setting';
-} elseif (isset($_POST['tambah_stok_masuk']) || isset($_POST['tambah_bahan_baru']) || isset($_POST['tambah_produk_baru'])) {
-    $tab_aktif = 'dashboard';
+} elseif (isset($_POST['tambah_stok_masuk']) || isset($_POST['catat_stok_keluar']) || isset($_POST['tambah_bahan_baru']) || isset($_POST['edit_bahan']) || isset($_POST['hapus_bahan'])) {
+    $tab_aktif = 'stok';
+} elseif (isset($_POST['tambah_produk_baru']) || isset($_POST['edit_produk']) || isset($_POST['hapus_produk']) || isset($_POST['simpan_resep_item']) || isset($_POST['hapus_resep_item'])) {
+    $tab_aktif = 'produk';
 }
 if (in_array($tab_aktif, ['pengguna', 'peran', 'user-setting']) && !is_owner()) {
     $tab_aktif = 'dashboard';
@@ -53,6 +55,21 @@ $chk_bahan = $conn->query("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_
 if ($chk_bahan === 0) $conn->query("ALTER TABLE bahan_baku ADD COLUMN gambar VARCHAR(255) NULL");
 $chk_user_foto = $conn->query("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='$db_name' AND TABLE_NAME='users' AND COLUMN_NAME='foto'")->num_rows;
 if ($chk_user_foto === 0) $conn->query("ALTER TABLE users ADD COLUMN foto VARCHAR(255) NULL");
+
+// --- Migrasi Otomatis: Tabel riwayat_stok (Inbound & Outbound Log) ---
+$chk_riwayat = $conn->query("SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='$db_name' AND TABLE_NAME='riwayat_stok'")->num_rows;
+if ($chk_riwayat === 0) {
+    $conn->query("CREATE TABLE riwayat_stok (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        id_bahan INT NOT NULL,
+        tipe ENUM('masuk', 'keluar_rusak', 'keluar_penjualan') NOT NULL,
+        jumlah DECIMAL(10,2) NOT NULL,
+        keterangan VARCHAR(255) NULL,
+        dicatat_oleh VARCHAR(100) NULL,
+        waktu TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (id_bahan) REFERENCES bahan_baku(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB;");
+}
 
 // --- Migrasi Otomatis: Tabel roles & kolom role dinamis pada users ---
 $chk_roles = $conn->query("SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='$db_name' AND TABLE_NAME='roles'")->num_rows;
@@ -103,7 +120,9 @@ if (!function_exists('prosesUploadGambar')) {
     }
 }
 
-// 1. Logika Tambah Stok Masuk (Inbound Stock - saat belanja bahan baku)
+$logged_user = !empty($_SESSION['nama_lengkap']) ? $_SESSION['nama_lengkap'] : (isset($_SESSION['username']) ? $_SESSION['username'] : 'Admin');
+
+// 1. Logika Tambah Stok Masuk (Inbound Stock - saat belanja/kulakan bahan baku)
 if (isset($_POST['tambah_stok_masuk'])) {
     $id_bahan = intval($_POST['id_bahan']);
     $jumlah_masuk = floatval($_POST['jumlah_masuk']);
@@ -114,11 +133,40 @@ if (isset($_POST['tambah_stok_masuk'])) {
         $stmt_in->bind_param("di", $jumlah_masuk, $id_bahan);
         if ($stmt_in->execute()) {
             $pesan_sukses = "Berhasil menambahkan stok bahan baku sebanyak $jumlah_masuk!";
+            // Catat ke riwayat mutasi stok
+            $stmt_log = $conn->prepare("INSERT INTO riwayat_stok (id_bahan, tipe, jumlah, keterangan, dicatat_oleh) VALUES (?, 'masuk', ?, ?, ?)");
+            $stmt_log->bind_param("idss", $id_bahan, $jumlah_masuk, $catatan, $logged_user);
+            $stmt_log->execute();
         } else {
             $pesan_error = "Gagal memperbarui stok: " . $conn->error;
         }
     } else {
         $pesan_error = "Jumlah stok masuk harus lebih dari 0.";
+    }
+}
+
+// 1b. Logika Catat Stok Keluar (Outbound - Bahan Rusak / Basi / Kadaluwarsa / Penyesuaian)
+if (isset($_POST['catat_stok_keluar'])) {
+    $id_bahan = intval($_POST['id_bahan']);
+    $jumlah_keluar = floatval($_POST['jumlah_keluar']);
+    $alasan = trim($_POST['alasan']);
+    $catatan = trim($_POST['catatan_keluar']);
+    $keterangan_full = $alasan . (!empty($catatan) ? " (" . $catatan . ")" : "");
+
+    if ($jumlah_keluar > 0) {
+        $stmt_out = $conn->prepare("UPDATE bahan_baku SET stok = GREATEST(0, stok - ?) WHERE id = ?");
+        $stmt_out->bind_param("di", $jumlah_keluar, $id_bahan);
+        if ($stmt_out->execute()) {
+            $pesan_sukses = "Berhasil mencatat pengeluaran bahan rusak/basi sebanyak $jumlah_keluar!";
+            // Catat ke riwayat mutasi stok
+            $stmt_log = $conn->prepare("INSERT INTO riwayat_stok (id_bahan, tipe, jumlah, keterangan, dicatat_oleh) VALUES (?, 'keluar_rusak', ?, ?, ?)");
+            $stmt_log->bind_param("idss", $id_bahan, $jumlah_keluar, $keterangan_full, $logged_user);
+            $stmt_log->execute();
+        } else {
+            $pesan_error = "Gagal memproses stok keluar: " . $conn->error;
+        }
+    } else {
+        $pesan_error = "Jumlah stok keluar harus lebih dari 0.";
     }
 }
 
@@ -134,14 +182,59 @@ if (isset($_POST['tambah_bahan_baru'])) {
         $stmt_new = $conn->prepare("INSERT INTO bahan_baku (nama_bahan, stok, satuan, batas_minimum, gambar) VALUES (?, ?, ?, ?, ?)");
         $stmt_new->bind_param("sdsds", $nama_bahan, $stok_awal, $satuan, $batas_minimum, $gambar_bahan);
         if ($stmt_new->execute()) {
+            $new_bahan_id = $conn->insert_id;
             $pesan_sukses = "Bahan baku baru '$nama_bahan' berhasil didaftarkan!";
+            if ($stok_awal > 0) {
+                $ket_awal = "Saldo stok awal saat pendaftaran";
+                $stmt_log = $conn->prepare("INSERT INTO riwayat_stok (id_bahan, tipe, jumlah, keterangan, dicatat_oleh) VALUES (?, 'masuk', ?, ?, ?)");
+                $stmt_log->bind_param("idss", $new_bahan_id, $stok_awal, $ket_awal, $logged_user);
+                $stmt_log->execute();
+            }
         } else {
             $pesan_error = "Gagal menambahkan bahan baku: " . $conn->error;
         }
     }
 }
 
-// 2b. Logika Tambah Menu Produk Baru (Makanan / Minuman)
+// 2b. Logika Edit Bahan Baku
+if (isset($_POST['edit_bahan'])) {
+    $id_bahan      = intval($_POST['id_bahan']);
+    $nama_bahan    = trim($_POST['nama_bahan']);
+    $satuan        = trim($_POST['satuan']);
+    $batas_minimum = floatval($_POST['batas_minimum']);
+
+    if (!empty($nama_bahan) && !empty($satuan) && $id_bahan > 0) {
+        $gambar_baru = prosesUploadGambar('gambar_bahan_edit', 'bahan');
+        if (!empty($gambar_baru)) {
+            $stmt_eb = $conn->prepare("UPDATE bahan_baku SET nama_bahan = ?, satuan = ?, batas_minimum = ?, gambar = ? WHERE id = ?");
+            $stmt_eb->bind_param("ssdsi", $nama_bahan, $satuan, $batas_minimum, $gambar_baru, $id_bahan);
+        } else {
+            $stmt_eb = $conn->prepare("UPDATE bahan_baku SET nama_bahan = ?, satuan = ?, batas_minimum = ? WHERE id = ?");
+            $stmt_eb->bind_param("ssdi", $nama_bahan, $satuan, $batas_minimum, $id_bahan);
+        }
+        if ($stmt_eb->execute()) {
+            $pesan_sukses = "Data bahan baku '$nama_bahan' berhasil diperbarui!";
+        } else {
+            $pesan_error = "Gagal memperbarui bahan baku: " . $conn->error;
+        }
+    }
+}
+
+// 2c. Logika Hapus Bahan Baku
+if (isset($_POST['hapus_bahan'])) {
+    $id_bahan = intval($_POST['id_bahan']);
+    if ($id_bahan > 0) {
+        $stmt_db = $conn->prepare("DELETE FROM bahan_baku WHERE id = ?");
+        $stmt_db->bind_param("i", $id_bahan);
+        if ($stmt_db->execute()) {
+            $pesan_sukses = "Bahan baku berhasil dihapus dari sistem.";
+        } else {
+            $pesan_error = "Gagal menghapus bahan baku: " . $conn->error;
+        }
+    }
+}
+
+// 3. Logika Tambah Menu Produk Baru (Makanan / Minuman)
 if (isset($_POST['tambah_produk_baru'])) {
     $nama_produk = trim($_POST['nama_produk']);
     $harga       = floatval($_POST['harga']);
@@ -152,9 +245,90 @@ if (isset($_POST['tambah_produk_baru'])) {
         $stmt_p = $conn->prepare("INSERT INTO produk (nama_produk, harga, kategori, gambar) VALUES (?, ?, ?, ?)");
         $stmt_p->bind_param("sdss", $nama_produk, $harga, $kategori, $gambar_produk);
         if ($stmt_p->execute()) {
-            $pesan_sukses = "Menu produk baru '$nama_produk' berhasil ditambahkan ke daftar kasir!";
+            $pesan_sukses = "Menu produk baru '$nama_produk' berhasil ditambahkan ke katalog!";
         } else {
             $pesan_error = "Gagal menambahkan menu produk: " . $conn->error;
+        }
+    }
+}
+
+// 3b. Logika Edit Menu Produk
+if (isset($_POST['edit_produk'])) {
+    $id_produk   = intval($_POST['id_produk']);
+    $nama_produk = trim($_POST['nama_produk']);
+    $harga       = floatval($_POST['harga']);
+    $kategori    = trim($_POST['kategori']);
+
+    if (!empty($nama_produk) && $harga > 0 && $id_produk > 0) {
+        $gambar_baru = prosesUploadGambar('gambar_produk_edit', 'produk');
+        if (!empty($gambar_baru)) {
+            $stmt_ep = $conn->prepare("UPDATE produk SET nama_produk = ?, harga = ?, kategori = ?, gambar = ? WHERE id = ?");
+            $stmt_ep->bind_param("sdssi", $nama_produk, $harga, $kategori, $gambar_baru, $id_produk);
+        } else {
+            $stmt_ep = $conn->prepare("UPDATE produk SET nama_produk = ?, harga = ?, kategori = ? WHERE id = ?");
+            $stmt_ep->bind_param("sdsi", $nama_produk, $harga, $kategori, $id_produk);
+        }
+        if ($stmt_ep->execute()) {
+            $pesan_sukses = "Menu '$nama_produk' berhasil diperbarui!";
+        } else {
+            $pesan_error = "Gagal memperbarui menu: " . $conn->error;
+        }
+    }
+}
+
+// 3c. Logika Hapus Menu Produk
+if (isset($_POST['hapus_produk'])) {
+    $id_produk = intval($_POST['id_produk']);
+    if ($id_produk > 0) {
+        $stmt_dp = $conn->prepare("DELETE FROM produk WHERE id = ?");
+        $stmt_dp->bind_param("i", $id_produk);
+        if ($stmt_dp->execute()) {
+            $pesan_sukses = "Menu produk berhasil dihapus dari katalog.";
+        } else {
+            $pesan_error = "Gagal menghapus menu: " . $conn->error;
+        }
+    }
+}
+
+// 3d. Logika Mapping Resep (Tambah / Ubah Komposisi Bahan Menu)
+if (isset($_POST['simpan_resep_item'])) {
+    $id_menu   = intval($_POST['id_menu']);
+    $id_bahan  = intval($_POST['id_bahan']);
+    $takaran   = floatval($_POST['jumlah_dibutuhkan']);
+
+    if ($id_menu > 0 && $id_bahan > 0 && $takaran > 0) {
+        // Cek apakah bahan sudah ada di resep menu ini
+        $stmt_cr = $conn->prepare("SELECT id FROM resep WHERE id_menu = ? AND id_bahan = ?");
+        $stmt_cr->bind_param("ii", $id_menu, $id_bahan);
+        $stmt_cr->execute();
+        $res_cr = $stmt_cr->get_result();
+
+        if ($r_row = $res_cr->fetch_assoc()) {
+            $stmt_ur = $conn->prepare("UPDATE resep SET jumlah_dibutuhkan = ? WHERE id = ?");
+            $stmt_ur->bind_param("di", $takaran, $r_row['id']);
+            $stmt_ur->execute();
+            $pesan_sukses = "Takaran bahan pada resep berhasil diperbarui!";
+        } else {
+            $stmt_ir = $conn->prepare("INSERT INTO resep (id_menu, id_bahan, jumlah_dibutuhkan) VALUES (?, ?, ?)");
+            $stmt_ir->bind_param("iid", $id_menu, $id_bahan, $takaran);
+            $stmt_ir->execute();
+            $pesan_sukses = "Bahan baku berhasil ditambahkan ke dalam formula resep menu!";
+        }
+    } else {
+        $pesan_error = "Mohon pilih bahan baku dan isi takaran yang valid.";
+    }
+}
+
+// 3e. Logika Hapus Bahan dari Resep
+if (isset($_POST['hapus_resep_item'])) {
+    $id_resep = intval($_POST['id_resep']);
+    if ($id_resep > 0) {
+        $stmt_dr = $conn->prepare("DELETE FROM resep WHERE id = ?");
+        $stmt_dr->bind_param("i", $id_resep);
+        if ($stmt_dr->execute()) {
+            $pesan_sukses = "Bahan berhasil dikeluarkan dari resep menu.";
+        } else {
+            $pesan_error = "Gagal menghapus bahan dari resep: " . $conn->error;
         }
     }
 }
@@ -461,6 +635,52 @@ $res_bahan = $conn->query("SELECT * FROM bahan_baku ORDER BY nama_bahan ASC");
 if ($res_bahan) {
     while ($b = $res_bahan->fetch_assoc()) {
         $bahan_baku_list[] = $b;
+    }
+}
+
+// Ambil Daftar Bahan Kritis / Menipis untuk Widget Dashboard
+$bahan_kritis_list = [];
+$res_kritis = $conn->query("SELECT * FROM bahan_baku WHERE stok <= batas_minimum ORDER BY stok ASC");
+if ($res_kritis) {
+    while ($bk = $res_kritis->fetch_assoc()) {
+        $bahan_kritis_list[] = $bk;
+    }
+}
+
+// Ambil Seluruh Data Produk / Menu
+$produk_list = [];
+$res_produk = $conn->query("SELECT * FROM produk ORDER BY kategori ASC, nama_produk ASC");
+if ($res_produk) {
+    while ($p = $res_produk->fetch_assoc()) {
+        $produk_list[] = $p;
+    }
+}
+
+// Ambil Mapping Resep per Menu (Bill of Materials)
+$resep_map = [];
+$res_resep = $conn->query("
+    SELECT r.id, r.id_menu, r.id_bahan, r.jumlah_dibutuhkan, b.nama_bahan, b.satuan 
+    FROM resep r 
+    JOIN bahan_baku b ON r.id_bahan = b.id 
+    ORDER BY b.nama_bahan ASC
+");
+if ($res_resep) {
+    while ($r = $res_resep->fetch_assoc()) {
+        $resep_map[$r['id_menu']][] = $r;
+    }
+}
+
+// Ambil Riwayat Mutasi Stok Terbaru (Inbound & Outbound, Limit 20)
+$riwayat_stok_list = [];
+$res_riwayat = $conn->query("
+    SELECT rs.*, b.nama_bahan, b.satuan 
+    FROM riwayat_stok rs 
+    JOIN bahan_baku b ON rs.id_bahan = b.id 
+    ORDER BY rs.id DESC LIMIT 20
+");
+if ($res_riwayat) {
+    while ($rw = $res_riwayat->fetch_assoc()) {
+        $riwayat_stok_list[] = $rw;
     }
 }
 
@@ -1141,6 +1361,145 @@ if (is_owner()) {
             font-weight: 600;
         }
 
+        /* Style Komponen Modul Menu Produk & Stok */
+        .item-thumb-box {
+            width: 44px;
+            height: 44px;
+            border-radius: 8px;
+            background: #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+            flex-shrink: 0;
+        }
+        .item-thumb-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .filter-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .filter-pills {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .filter-pill {
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            color: #475569;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12.5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .filter-pill.active, .filter-pill:hover {
+            background: var(--primary);
+            color: #ffffff;
+            border-color: var(--primary);
+        }
+        .search-input-wrap {
+            position: relative;
+            min-width: 240px;
+        }
+        .search-input-wrap input {
+            width: 100%;
+            padding: 8px 12px 8px 34px;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+        .search-input-wrap input:focus {
+            border-color: var(--primary);
+        }
+        .search-input-wrap .search-icon {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            font-size: 13px;
+        }
+        .badge-kat-makanan {
+            background: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .badge-kat-minuman {
+            background: #e0f2fe;
+            color: #0284c7;
+            border: 1px solid #bae6fd;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .resep-tag-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            max-width: 320px;
+        }
+        .resep-tag {
+            background: #f1f5f9;
+            color: #334155;
+            border: 1px solid #e2e8f0;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 7px;
+            border-radius: 5px;
+        }
+        .btn-table-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 5px 9px;
+            font-size: 11.5px;
+            font-weight: 600;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .btn-table-action:hover {
+            background: #f8fafc;
+            border-color: #94a3b8;
+        }
+        .btn-table-action.btn-resep {
+            background: #eff6ff;
+            color: #1d4ed8;
+            border-color: #bfdbfe;
+        }
+        .btn-table-action.btn-resep:hover {
+            background: #dbeafe;
+        }
+        .btn-table-action.btn-danger-sm {
+            background: #fef2f2;
+            color: #dc2626;
+            border-color: #fecaca;
+        }
+        .btn-table-action.btn-danger-sm:hover {
+            background: #fee2e2;
+        }
+
         /* ==========================================================================
            RESPONSIVE BREAKPOINTS FOR ADMIN DASHBOARD
            ========================================================================== */
@@ -1278,6 +1637,12 @@ if (is_owner()) {
                 <a href="admin.php?tab=dashboard" data-tab="dashboard" class="nav-item <?php echo ($tab_aktif === 'dashboard') ? 'active' : ''; ?>" onclick="pindahTab('dashboard', event)">
                     <span>📊</span> Dashboard
                 </a>
+                <a href="admin.php?tab=produk" data-tab="produk" class="nav-item <?php echo ($tab_aktif === 'produk') ? 'active' : ''; ?>" onclick="pindahTab('produk', event)">
+                    <span>🍔</span> Menu Produk
+                </a>
+                <a href="admin.php?tab=stok" data-tab="stok" class="nav-item <?php echo ($tab_aktif === 'stok') ? 'active' : ''; ?>" onclick="pindahTab('stok', event)">
+                    <span>📦</span> Stok Bahan Baku
+                </a>
                 <?php if (is_owner()): ?>
                 <div class="nav-group <?php echo in_array($tab_aktif, ['pengguna', 'peran', 'user-setting']) ? 'open' : ''; ?>" id="nav-group-pengaturan">
                     <div class="nav-item nav-parent <?php echo in_array($tab_aktif, ['pengguna', 'peran', 'user-setting']) ? 'active' : ''; ?>" onclick="toggleSubmenu('nav-group-pengaturan')">
@@ -1327,7 +1692,9 @@ if (is_owner()) {
                             if ($tab_aktif === 'pengguna') echo 'Pengelolaan Pengguna';
                             elseif ($tab_aktif === 'peran') echo 'Peran & Hak Akses (RBAC)';
                             elseif ($tab_aktif === 'user-setting') echo 'User Setting & Profil Akun';
-                            else echo 'Dashboard Manajemen & Persediaan'; 
+                            elseif ($tab_aktif === 'produk') echo 'Katalog Menu & Resep';
+                            elseif ($tab_aktif === 'stok') echo 'Persediaan Bahan Baku (Stok)';
+                            else echo 'Dashboard Manajemen'; 
                         ?>
                     </h1>
                     <p id="topbar-page-subtitle">
@@ -1335,7 +1702,9 @@ if (is_owner()) {
                             if ($tab_aktif === 'pengguna') echo 'Daftar akun staf terdaftar, pendaftaran staf baru, dan kontrol akun';
                             elseif ($tab_aktif === 'peran') echo 'Konfigurasi pembagian hak akses fitur dan penetapan peran staf (Owner, Admin, Kasir)';
                             elseif ($tab_aktif === 'user-setting') echo 'Pengaturan kredensial akun staf dan profil pribadi';
-                            else echo 'Sistem Informasi Terintegrasi UMKM Fillah Food - Capstone Project STSI4440 UT'; 
+                            elseif ($tab_aktif === 'produk') echo 'Kelola daftar menu makanan, minuman, harga jual, dan formula resep bahan baku';
+                            elseif ($tab_aktif === 'stok') echo 'Pantau sisa stok bahan baku, catat kulakan stok masuk (inbound), dan bahan rusak (outbound)';
+                            else echo 'Ringkasan performa omzet bisnis, peringatan stok bahan baku, dan transaksi kasir'; 
                         ?>
                     </p>
                 </div>
@@ -1410,68 +1779,90 @@ if (is_owner()) {
                 </div>
             </div>
 
-            <!-- 2 Kolom: Manajemen Persediaan & Riwayat Transaksi -->
+            <!-- 2 Kolom: Peringatan Stok Menipis & Riwayat Transaksi -->
             <div class="section-grid">
                 
-                <!-- Kolom Kiri: Tabel Stok Persediaan Bahan Baku -->
-                <div class="panel-card" id="stok-persediaan">
-                    <div class="panel-header">
-                        <h2><span>📦</span> Persediaan Bahan Baku (Inventory)</h2>
-                        <div style="display: flex; gap: 8px;">
-                            <button class="btn-primary-sm" style="background:var(--secondary); color:#000;" onclick="bukaModalProdukBaru()">+ Menu Produk Baru</button>
-                            <button class="btn-primary-sm" onclick="bukaModalStokMasuk()">+ Stok Masuk</button>
-                            <button class="btn-primary-sm" style="background:#475569;" onclick="bukaModalBahanBaru()">+ Bahan Baku</button>
+                <!-- Kolom Kiri: Peringatan Persediaan Menipis & Pintasan -->
+                <div>
+                    <?php if (!empty($bahan_kritis_list)): ?>
+                        <div class="panel-card" style="border-left: 4px solid var(--accent); margin-bottom: 20px;">
+                            <div class="panel-header">
+                                <h2><span>⚠️</span> Peringatan Persediaan Menipis</h2>
+                                <button class="btn-primary-sm" onclick="pindahTab('stok', event)">Buka Stok Bahan ➔</button>
+                            </div>
+                            <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 12px;">Bahan baku berikut telah mencapai atau di bawah batas aman minimum. Segera belanja pasokan.</p>
+                            <div class="table-responsive">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Bahan Baku</th>
+                                            <th>Sisa Stok</th>
+                                            <th>Batas Min</th>
+                                            <th>Status</th>
+                                            <th>Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($bahan_kritis_list as $bk): ?>
+                                            <tr>
+                                                <td><strong><?php echo htmlspecialchars($bk['nama_bahan']); ?></strong></td>
+                                                <td style="color: var(--accent); font-weight: 800;">
+                                                    <?php echo rtrim(rtrim(number_format($bk['stok'], 2, '.', ''), '0'), '.'); ?> <?php echo htmlspecialchars($bk['satuan']); ?>
+                                                </td>
+                                                <td style="color: var(--text-muted);">
+                                                    <?php echo rtrim(rtrim(number_format($bk['batas_minimum'], 2, '.', ''), '0'), '.'); ?> <?php echo htmlspecialchars($bk['satuan']); ?>
+                                                </td>
+                                                <td>
+                                                    <span class="badge <?php echo ($bk['stok'] <= 0) ? 'badge-danger' : 'badge-warning'; ?>">
+                                                        <?php echo ($bk['stok'] <= 0) ? 'Habis / Kritis' : 'Menipis'; ?>
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <button class="btn-table-action" onclick="isiStokCepat(<?php echo $bk['id']; ?>, '<?php echo addslashes($bk['nama_bahan']); ?>', '<?php echo $bk['satuan']; ?>')">
+                                                        + Belanja
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                    </div>
+                    <?php else: ?>
+                        <div class="panel-card" style="border-left: 4px solid #16a34a; margin-bottom: 20px;">
+                            <div class="panel-header">
+                                <h2><span>📦</span> Status Persediaan Dapur</h2>
+                                <button class="btn-primary-sm" onclick="pindahTab('stok', event)">Kelola Bahan Baku ➔</button>
+                            </div>
+                            <div style="padding: 16px; background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0; display: flex; align-items: center; gap: 12px;">
+                                <span style="font-size: 28px;">✅</span>
+                                <div>
+                                    <strong style="color: #15803d; font-size: 14px;">Semua Bahan Baku Aman</strong>
+                                    <p style="font-size: 12.5px; color: #166534; margin: 2px 0 0 0;">Total <?php echo count($bahan_baku_list); ?> jenis bahan baku tersedia di atas ambang batas minimum.</p>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endif; ?>
 
-                    <div class="table-responsive">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Nama Bahan</th>
-                                    <th>Stok Saat Ini</th>
-                                    <th>Batas Minimum</th>
-                                    <th>Status Stok</th>
-                                    <th>Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($bahan_baku_list as $b): ?>
-                                    <?php 
-                                        $stok = floatval($b['stok']);
-                                        $min = floatval($b['batas_minimum']);
-                                        if ($stok <= 0) {
-                                            $badge_class = "badge-danger";
-                                            $badge_label = "Habis / Kritis";
-                                        } elseif ($stok <= $min) {
-                                            $badge_class = "badge-warning";
-                                            $badge_label = "Menipis";
-                                        } else {
-                                            $badge_class = "badge-safe";
-                                            $badge_label = "Stok Aman";
-                                        }
-                                    ?>
-                                    <tr>
-                                        <td><strong><?php echo htmlspecialchars($b['nama_bahan']); ?></strong></td>
-                                        <td>
-                                            <span style="font-size: 15px; font-weight: 800;"><?php echo rtrim(rtrim(number_format($stok, 2, '.', ''), '0'), '.'); ?></span> 
-                                            <?php echo htmlspecialchars($b['satuan']); ?>
-                                        </td>
-                                        <td style="color: var(--text-muted);">
-                                            <?php echo rtrim(rtrim(number_format($min, 2, '.', ''), '0'), '.'); ?> <?php echo htmlspecialchars($b['satuan']); ?>
-                                        </td>
-                                        <td>
-                                            <span class="badge <?php echo $badge_class; ?>"><?php echo $badge_label; ?></span>
-                                        </td>
-                                        <td>
-                                            <button style="background: none; border: 1px solid var(--border); padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 700;" onclick="isiStokCepat(<?php echo $b['id']; ?>, '<?php echo addslashes($b['nama_bahan']); ?>', '<?php echo $b['satuan']; ?>')">
-                                                + Tambah
-                                            </button>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+                    <!-- Pintasan Cepat Sistem -->
+                    <div class="panel-card">
+                        <div class="panel-header">
+                            <h2><span>⚡</span> Pintasan Cepat</h2>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px;">
+                            <button type="button" onclick="pindahTab('produk', event)" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:14px; text-align:center; cursor:pointer; font-weight:700; font-size:12px; display:flex; flex-direction:column; align-items:center; gap:6px;">
+                                <span style="font-size:22px;">🍔</span> Kelola Menu & Resep
+                            </button>
+                            <button type="button" onclick="bukaModalStokMasuk()" style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:14px; text-align:center; cursor:pointer; font-weight:700; font-size:12px; color:#15803d; display:flex; flex-direction:column; align-items:center; gap:6px;">
+                                <span style="font-size:22px;">📥</span> Catat Stok Masuk
+                            </button>
+                            <a href="kasir.php" style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:10px; padding:14px; text-align:center; text-decoration:none; font-weight:700; font-size:12px; color:#0369a1; display:flex; flex-direction:column; align-items:center; gap:6px;">
+                                <span style="font-size:22px;">🛒</span> Layar Kasir POS
+                            </a>
+                            <a href="menu.php" target="_blank" style="background:#fdf4ff; border:1px solid #f0abfc; border-radius:10px; padding:14px; text-align:center; text-decoration:none; font-weight:700; font-size:12px; color:#a21caf; display:flex; flex-direction:column; align-items:center; gap:6px;">
+                                <span style="font-size:22px;">📱</span> E-Menu Pelanggan
+                            </a>
+                        </div>
                     </div>
                 </div>
 
@@ -1521,7 +1912,288 @@ if (is_owner()) {
             </div> <!-- /section-grid -->
         </div> <!-- /view-dashboard -->
 
-        <!-- TAB VIEW 2: KELOLA PENGGUNA (Khusus Role Owner) -->
+        <!-- TAB VIEW 2: MENU PRODUK & RESEP -->
+        <div id="view-produk" class="tab-view" style="<?php echo ($tab_aktif === 'produk') ? '' : 'display: none;'; ?>">
+            <div class="panel-card">
+                <div class="panel-header">
+                    <div>
+                        <h2><span>🍔</span> Katalog Menu Makanan & Minuman</h2>
+                        <span style="font-size: 12px; color: var(--text-muted);">Kelola harga jual, foto produk, dan formula resep bahan baku</span>
+                    </div>
+                    <button class="btn-primary-sm" onclick="bukaModalProdukBaru()">+ Tambah Menu Baru</button>
+                </div>
+
+                <div class="filter-bar">
+                    <div class="filter-pills">
+                        <button type="button" class="filter-pill active" onclick="filterKategoriProduk('all', this)">Semua (<?php echo count($produk_list); ?>)</button>
+                        <button type="button" class="filter-pill" onclick="filterKategoriProduk('Makanan', this)">🍗 Makanan</button>
+                        <button type="button" class="filter-pill" onclick="filterKategoriProduk('Minuman', this)">🥤 Minuman</button>
+                    </div>
+                    <div class="search-input-wrap">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="cari-menu-produk" placeholder="Cari nama menu..." onkeyup="filterMenuProduk()">
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table id="tabel-menu-produk">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">Foto</th>
+                                <th>Nama Menu</th>
+                                <th>Kategori</th>
+                                <th>Harga Jual</th>
+                                <th>Formula Resep (Bahan Baku)</th>
+                                <th style="text-align: right;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($produk_list)): ?>
+                                <tr>
+                                    <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">
+                                        Belum ada menu produk terdaftar. Klik <strong>"+ Tambah Menu Baru"</strong> untuk mulai mendaftarkan.
+                                    </td>
+                                </tr>
+                            <?php else: ?>
+                                <?php foreach ($produk_list as $p): ?>
+                                    <tr class="baris-produk" data-kategori="<?php echo htmlspecialchars($p['kategori']); ?>">
+                                        <td>
+                                            <div class="item-thumb-box">
+                                                <?php if (!empty($p['gambar']) && file_exists(__DIR__ . '/' . $p['gambar'])): ?>
+                                                    <img src="<?php echo htmlspecialchars($p['gambar']); ?>" alt="<?php echo htmlspecialchars($p['nama_produk']); ?>">
+                                                <?php else: ?>
+                                                    <span><?php echo ($p['kategori'] === 'Minuman') ? '🥤' : '🍗'; ?></span>
+                                                <?php endif; ?>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <strong class="nama-produk-teks" style="font-size: 13.5px;"><?php echo htmlspecialchars($p['nama_produk']); ?></strong>
+                                            <div style="font-size: 11px; color: var(--text-muted);">ID Menu: #PRD-<?php echo str_pad($p['id'], 3, '0', STR_PAD_LEFT); ?></div>
+                                        </td>
+                                        <td>
+                                            <span class="<?php echo ($p['kategori'] === 'Minuman') ? 'badge-kat-minuman' : 'badge-kat-makanan'; ?>">
+                                                <?php echo htmlspecialchars($p['kategori']); ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span style="font-weight: 800; color: var(--primary); font-size: 14px;">
+                                                Rp <?php echo number_format($p['harga'], 0, ',', '.'); ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <?php if (!empty($resep_map[$p['id']])): ?>
+                                                <div class="resep-tag-list">
+                                                    <?php foreach ($resep_map[$p['id']] as $item_r): ?>
+                                                        <span class="resep-tag">
+                                                            <?php echo htmlspecialchars($item_r['nama_bahan']); ?>: 
+                                                            <strong><?php echo rtrim(rtrim(number_format($item_r['jumlah_dibutuhkan'], 2, '.', ''), '0'), '.'); ?> <?php echo htmlspecialchars($item_r['satuan']); ?></strong>
+                                                        </span>
+                                                    <?php endforeach; ?>
+                                                </div>
+                                            <?php else: ?>
+                                                <span style="font-size: 11.5px; color: #94a3b8; font-style: italic;">⚠️ Belum diatur resep</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td style="text-align: right; white-space: nowrap;">
+                                            <button type="button" class="btn-table-action btn-resep" onclick="bukaModalAturResep(<?php echo $p['id']; ?>, '<?php echo addslashes($p['nama_produk']); ?>')">
+                                                ⚙️ Atur Resep
+                                            </button>
+                                            <button type="button" class="btn-table-action" onclick="bukaModalEditProduk(<?php echo htmlspecialchars(json_encode($p)); ?>)">
+                                                ✏️ Edit
+                                            </button>
+                                            <form method="POST" action="" style="display: inline;" onsubmit="return confirm('Apakah Anda yakin ingin menghapus menu \'<?php echo addslashes($p['nama_produk']); ?>\'?');">
+                                                <input type="hidden" name="id_produk" value="<?php echo $p['id']; ?>">
+                                                <button type="submit" name="hapus_produk" class="btn-table-action btn-danger-sm" title="Hapus Menu">
+                                                    🗑️
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB VIEW 3: STOK BAHAN BAKU (INBOUND & OUTBOUND) -->
+        <div id="view-stok" class="tab-view" style="<?php echo ($tab_aktif === 'stok') ? '' : 'display: none;'; ?>">
+            <div class="panel-card">
+                <div class="panel-header">
+                    <div>
+                        <h2><span>📦</span> Persediaan Bahan Baku (Gudang & Dapur)</h2>
+                        <span style="font-size: 12px; color: var(--text-muted);">Pantau saldo fisik bahan, catat kulakan masuk, dan bahan rusak/basi</span>
+                    </div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button class="btn-primary-sm" style="background: #16a34a;" onclick="bukaModalStokMasuk()">📥 + Stok Masuk</button>
+                        <button class="btn-primary-sm" style="background: #dc2626;" onclick="bukaModalStokKeluar()">📤 - Catat Rusak / Basi</button>
+                        <button class="btn-primary-sm" style="background: #475569;" onclick="bukaModalBahanBaru()">+ Bahan Baru</button>
+                    </div>
+                </div>
+
+                <div class="filter-bar">
+                    <div style="font-size: 13px; color: var(--text-muted);">
+                        Menampilkan <strong><?php echo count($bahan_baku_list); ?></strong> jenis bahan baku terdaftar
+                    </div>
+                    <div class="search-input-wrap">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="cari-bahan-baku" placeholder="Cari bahan baku..." onkeyup="filterBahanBaku()">
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table id="tabel-bahan-baku">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">Foto</th>
+                                <th>Nama Bahan</th>
+                                <th>Stok Saat Ini</th>
+                                <th>Batas Minimum</th>
+                                <th>Status Stok</th>
+                                <th style="text-align: right;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($bahan_baku_list as $b): ?>
+                                <?php 
+                                    $stok = floatval($b['stok']);
+                                    $min = floatval($b['batas_minimum']);
+                                    if ($stok <= 0) {
+                                        $badge_class = "badge-danger";
+                                        $badge_label = "Habis / Kritis";
+                                    } elseif ($stok <= $min) {
+                                        $badge_class = "badge-warning";
+                                        $badge_label = "Menipis";
+                                    } else {
+                                        $badge_class = "badge-safe";
+                                        $badge_label = "Stok Aman";
+                                    }
+                                ?>
+                                <tr class="baris-bahan">
+                                    <td>
+                                        <div class="item-thumb-box">
+                                            <?php if (!empty($b['gambar']) && file_exists(__DIR__ . '/' . $b['gambar'])): ?>
+                                                <img src="<?php echo htmlspecialchars($b['gambar']); ?>" alt="<?php echo htmlspecialchars($b['nama_bahan']); ?>">
+                                            <?php else: ?>
+                                                <span>📦</span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <strong class="nama-bahan-teks" style="font-size: 13.5px;"><?php echo htmlspecialchars($b['nama_bahan']); ?></strong>
+                                        <div style="font-size: 11px; color: var(--text-muted);">Satuan: <?php echo htmlspecialchars($b['satuan']); ?></div>
+                                    </td>
+                                    <td>
+                                        <span style="font-size: 15px; font-weight: 800; color: <?php echo ($stok <= $min) ? 'var(--accent)' : 'inherit'; ?>;">
+                                            <?php echo rtrim(rtrim(number_format($stok, 2, '.', ''), '0'), '.'); ?>
+                                        </span> 
+                                        <span style="font-size: 12px; color: var(--text-muted);"><?php echo htmlspecialchars($b['satuan']); ?></span>
+                                    </td>
+                                    <td style="color: var(--text-muted);">
+                                        <?php echo rtrim(rtrim(number_format($min, 2, '.', ''), '0'), '.'); ?> <?php echo htmlspecialchars($b['satuan']); ?>
+                                    </td>
+                                    <td>
+                                        <span class="badge <?php echo $badge_class; ?>"><?php echo $badge_label; ?></span>
+                                    </td>
+                                    <td style="text-align: right; white-space: nowrap;">
+                                        <button type="button" class="btn-table-action" style="color: #16a34a; border-color: #bbf7d0; background: #f0fdf4;" onclick="isiStokCepat(<?php echo $b['id']; ?>, '<?php echo addslashes($b['nama_bahan']); ?>', '<?php echo $b['satuan']; ?>')" title="Tambah Stok Masuk">
+                                            + Masuk
+                                        </button>
+                                        <button type="button" class="btn-table-action" style="color: #dc2626; border-color: #fecaca; background: #fef2f2;" onclick="catatKeluarCepat(<?php echo $b['id']; ?>, '<?php echo addslashes($b['nama_bahan']); ?>', '<?php echo $b['satuan']; ?>')" title="Catat Stok Rusak">
+                                            - Rusak
+                                        </button>
+                                        <button type="button" class="btn-table-action" onclick="bukaModalEditBahan(<?php echo htmlspecialchars(json_encode($b)); ?>)">
+                                            ✏️ Edit
+                                        </button>
+                                        <form method="POST" action="" style="display: inline;" onsubmit="return confirm('Hapus bahan baku \'<?php echo addslashes($b['nama_bahan']); ?>\'? Formula resep yang menggunakannya juga akan terhapus.');">
+                                            <input type="hidden" name="id_bahan" value="<?php echo $b['id']; ?>">
+                                            <button type="submit" name="hapus_bahan" class="btn-table-action btn-danger-sm" title="Hapus Bahan">
+                                                🗑️
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tabel Riwayat Mutasi Stok -->
+            <div class="panel-card" style="margin-top: 24px;">
+                <div class="panel-header">
+                    <div>
+                        <h2><span>📑</span> Riwayat Mutasi Stok Masuk & Keluar</h2>
+                        <span style="font-size: 12px; color: var(--text-muted);">20 log aktivitas kulakan belanja dan pengeluaran bahan terbaru</span>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Waktu Mutasi</th>
+                                <th>Bahan Baku</th>
+                                <th>Jenis Mutasi</th>
+                                <th>Jumlah</th>
+                                <th>Keterangan / Catatan</th>
+                                <th>Dicatat Oleh</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($riwayat_stok_list)): ?>
+                                <tr>
+                                    <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 24px;">
+                                        Belum ada catatan mutasi stok. Catat stok masuk atau bahan rusak untuk mulai melacak riwayat persediaan.
+                                    </td>
+                                </tr>
+                            <?php else: ?>
+                                <?php foreach ($riwayat_stok_list as $rw): ?>
+                                    <tr>
+                                        <td style="font-size: 11.5px; color: var(--text-muted);">
+                                            <?php echo date('d/m/Y H:i', strtotime($rw['waktu'])); ?>
+                                        </td>
+                                        <td>
+                                            <strong><?php echo htmlspecialchars($rw['nama_bahan']); ?></strong>
+                                        </td>
+                                        <td>
+                                            <?php if ($rw['tipe'] === 'masuk'): ?>
+                                                <span class="badge" style="background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;">📥 Stok Masuk</span>
+                                            <?php elseif ($rw['tipe'] === 'keluar_rusak'): ?>
+                                                <span class="badge" style="background:#fee2e2; color:#b91c1c; border:1px solid #fecaca;">📤 Rusak / Basi</span>
+                                            <?php else: ?>
+                                                <span class="badge" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd;">🛒 Terjual Kasir</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <?php if ($rw['tipe'] === 'masuk'): ?>
+                                                <span style="color: #15803d; font-weight: 800; font-size: 13.5px;">
+                                                    +<?php echo rtrim(rtrim(number_format($rw['jumlah'], 2, '.', ''), '0'), '.'); ?>
+                                                </span>
+                                            <?php else: ?>
+                                                <span style="color: #b91c1c; font-weight: 800; font-size: 13.5px;">
+                                                    -<?php echo rtrim(rtrim(number_format($rw['jumlah'], 2, '.', ''), '0'), '.'); ?>
+                                                </span>
+                                            <?php endif; ?>
+                                            <span style="font-size: 11.5px; color: var(--text-muted);"><?php echo htmlspecialchars($rw['satuan']); ?></span>
+                                        </td>
+                                        <td style="font-size: 12.5px;">
+                                            <?php echo htmlspecialchars($rw['keterangan'] ?? '-'); ?>
+                                        </td>
+                                        <td style="font-size: 11.5px; color: var(--text-muted);">
+                                            <?php echo htmlspecialchars($rw['dicatat_oleh'] ?? 'Sistem'); ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB VIEW: KELOLA PENGGUNA (Khusus Role Owner) -->
         <?php if (is_owner()): ?>
         <div id="view-pengguna" class="tab-view" style="<?php echo ($tab_aktif === 'pengguna') ? '' : 'display: none;'; ?>">
             <div class="panel-card" id="kelola-pengguna">
@@ -2049,6 +2721,195 @@ if (is_owner()) {
         </div>
     </div>
 
+    <!-- Modal Form Catat Stok Keluar / Bahan Rusak & Basi -->
+    <div class="modal-overlay" id="modal-stok-keluar">
+        <div class="modal-box">
+            <h3 class="modal-title">📤 Catat Bahan Rusak / Basi (Outbound)</h3>
+            <p style="font-size:12px; color:var(--text-muted); margin-top:-6px; margin-bottom:14px;">Catat bahan baku yang rusak, basi, kadaluwarsa, atau tumpah untuk memotong stok fisik.</p>
+            <form method="POST" action="">
+                <div class="form-group">
+                    <label class="form-label">Pilih Bahan Baku</label>
+                    <select name="id_bahan" id="select-keluar-id-bahan" class="form-control" required onchange="updateSatuanKeluar(this)">
+                        <?php foreach ($bahan_baku_list as $b): ?>
+                            <option value="<?php echo $b['id']; ?>" data-satuan="<?php echo htmlspecialchars($b['satuan']); ?>" data-stok="<?php echo $b['stok']; ?>">
+                                <?php echo htmlspecialchars($b['nama_bahan']); ?> (Tersisa: <?php echo rtrim(rtrim(number_format($b['stok'], 2, '.', ''), '0'), '.'); ?> <?php echo htmlspecialchars($b['satuan']); ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Jumlah Keluar / Rusak (<span id="satuan-label-keluar">satuan</span>)</label>
+                    <input type="number" step="0.01" name="jumlah_keluar" class="form-control" placeholder="Contoh: 1 atau 0.5" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Alasan Pengurangan Stok</label>
+                    <select name="alasan" class="form-control" required>
+                        <option value="Basi / Busuk">Basi / Busuk</option>
+                        <option value="Kadaluwarsa (Expired)">Kadaluwarsa (Expired)</option>
+                        <option value="Rusak / Tumpah / Gosong">Rusak / Tumpah / Gosong</option>
+                        <option value="Sampel / Tester">Sampel / Tester</option>
+                        <option value="Penyesuaian Selisih Opname">Penyesuaian Selisih Opname</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Catatan Tambahan (Opsional)</label>
+                    <input type="text" name="catatan_keluar" class="form-control" placeholder="Contoh: Ditemukan berjamur di wadah penyimpanan">
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit" name="catat_stok_keluar" class="btn-primary-sm" style="flex:1; padding:12px; background:#dc2626;">Simpan Pengurangan Stok</button>
+                    <button type="button" class="btn-primary-sm" style="background:#cbd5e1; color:#0f172a;" onclick="tutupModalStokKeluar()">Batal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Edit Bahan Baku -->
+    <div class="modal-overlay" id="modal-edit-bahan">
+        <div class="modal-box">
+            <h3 class="modal-title">✏️ Edit Bahan Baku</h3>
+            <form method="POST" action="" enctype="multipart/form-data">
+                <input type="hidden" name="id_bahan" id="edit-id-bahan">
+                
+                <div class="form-group">
+                    <label class="form-label">Nama Bahan Baku</label>
+                    <input type="text" name="nama_bahan" id="edit-nama-bahan" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Satuan Ukuran</label>
+                    <input type="text" name="satuan" id="edit-satuan-bahan" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Ambang Batas Minimum</label>
+                    <input type="number" step="0.01" name="batas_minimum" id="edit-batas-bahan" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Ganti Foto Bahan Baku (Opsional)</label>
+                    <div class="img-upload-area" onclick="document.getElementById('input-edit-gambar-bahan').click()">
+                        <div class="img-upload-preview" id="preview-edit-bahan">
+                            <span class="img-upload-icon">📦</span>
+                            <span class="img-upload-hint">Klik untuk ganti foto</span>
+                        </div>
+                    </div>
+                    <input type="file" id="input-edit-gambar-bahan" name="gambar_bahan_edit" accept="image/*" style="display:none" onchange="previewGambar(this, 'preview-edit-bahan')">
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit" name="edit_bahan" class="btn-primary-sm" style="flex:1; padding:12px;">Simpan Perubahan</button>
+                    <button type="button" class="btn-primary-sm" style="background:#cbd5e1; color:#0f172a;" onclick="tutupModalEditBahan()">Batal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Edit Menu Produk -->
+    <div class="modal-overlay" id="modal-edit-produk">
+        <div class="modal-box">
+            <h3 class="modal-title">✏️ Edit Menu Makanan / Minuman</h3>
+            <form method="POST" action="" enctype="multipart/form-data">
+                <input type="hidden" name="id_produk" id="edit-id-produk">
+
+                <div class="form-group">
+                    <label class="form-label">Nama Menu</label>
+                    <input type="text" name="nama_produk" id="edit-nama-produk" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Kategori</label>
+                    <select name="kategori" id="edit-kategori-produk" class="form-control" required>
+                        <option value="Makanan">Makanan</option>
+                        <option value="Minuman">Minuman</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Harga Jual Satuan (Rp)</label>
+                    <input type="number" step="500" name="harga" id="edit-harga-produk" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Ganti Foto Menu (Opsional)</label>
+                    <div class="img-upload-area" onclick="document.getElementById('input-edit-gambar-produk').click()">
+                        <div class="img-upload-preview" id="preview-edit-produk">
+                            <span class="img-upload-icon">🍗</span>
+                            <span class="img-upload-hint">Klik untuk ganti foto</span>
+                        </div>
+                    </div>
+                    <input type="file" id="input-edit-gambar-produk" name="gambar_produk_edit" accept="image/*" style="display:none" onchange="previewGambar(this, 'preview-edit-produk')">
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit" name="edit_produk" class="btn-primary-sm" style="flex:1; padding:12px;">Simpan Perubahan</button>
+                    <button type="button" class="btn-primary-sm" style="background:#cbd5e1; color:#0f172a;" onclick="tutupModalEditProduk()">Batal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Atur Resep & Komposisi Bahan Baku (BOM) -->
+    <div class="modal-overlay" id="modal-atur-resep">
+        <div class="modal-box" style="max-width: 580px;">
+            <h3 class="modal-title">⚙️ Formula Resep: <span id="resep-nama-menu" style="color:var(--primary);">Menu</span></h3>
+            <p style="font-size:12px; color:var(--text-muted); margin-top:-6px; margin-bottom:16px;">Tentukan komposisi takaran bahan baku yang terpotong otomatis saat menu ini terjual di kasir.</p>
+
+            <!-- Tabel Komposisi Bahan Saat Ini -->
+            <div style="margin-bottom: 20px;">
+                <h4 style="font-size:13px; font-weight:700; margin-bottom:8px; color:var(--text-dark);">Bahan Baku Terpasang:</h4>
+                <div class="table-responsive" style="max-height: 220px; overflow-y: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Bahan Baku</th>
+                                <th>Takaran Dibutuhkan</th>
+                                <th style="text-align:right;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resep-tabel-body">
+                            <!-- Diisi via JavaScript renderResepItems() -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Form Tambah Bahan ke Resep -->
+            <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 14px;">
+                <h4 style="font-size:12.5px; font-weight:700; margin-bottom:10px; color:#1e293b;">+ Tambah / Sesuaikan Bahan:</h4>
+                <form method="POST" action="">
+                    <input type="hidden" name="id_menu" id="resep-form-id-menu">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label" style="font-size:11px;">Pilih Bahan</label>
+                            <select name="id_bahan" id="resep-select-bahan" class="form-control" required onchange="updateSatuanResep(this)">
+                                <?php foreach ($bahan_baku_list as $b): ?>
+                                    <option value="<?php echo $b['id']; ?>" data-satuan="<?php echo htmlspecialchars($b['satuan']); ?>">
+                                        <?php echo htmlspecialchars($b['nama_bahan']); ?> (<?php echo htmlspecialchars($b['satuan']); ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label" style="font-size:11px;">Takaran / Porsi (<span id="resep-satuan-label">satuan</span>)</label>
+                            <input type="number" step="0.001" name="jumlah_dibutuhkan" class="form-control" placeholder="Contoh: 1 atau 0.1" required>
+                        </div>
+                    </div>
+                    <button type="submit" name="simpan_resep_item" class="btn-primary-sm" style="width:100%; margin-top:12px; padding:9px;">
+                        Simpan ke Resep Menu
+                    </button>
+                </form>
+            </div>
+
+            <div class="modal-footer" style="margin-top: 16px;">
+                <button type="button" class="btn-primary-sm" style="background:#cbd5e1; color:#0f172a; width:100%;" onclick="tutupModalAturResep()">Tutup</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Form Tambah Pengguna Baru (Khusus Owner) -->
     <?php if (is_owner()): ?>
     <div class="modal-overlay" id="modal-pengguna-baru">
@@ -2279,6 +3140,147 @@ if (is_owner()) {
             document.getElementById('modal-produk-baru').style.display = 'none';
         }
 
+        /* ---- Modal Stok Keluar ---- */
+        function bukaModalStokKeluar() {
+            var el = document.getElementById('modal-stok-keluar');
+            if (el) el.style.display = 'flex';
+        }
+        function tutupModalStokKeluar() {
+            var el = document.getElementById('modal-stok-keluar');
+            if (el) el.style.display = 'none';
+        }
+        function catatKeluarCepat(id, nama, satuan) {
+            var sel = document.getElementById('select-keluar-id-bahan');
+            if (sel) sel.value = id;
+            var lbl = document.getElementById('satuan-label-keluar');
+            if (lbl) lbl.textContent = satuan;
+            bukaModalStokKeluar();
+        }
+        function updateSatuanKeluar(sel) {
+            var opt = sel.options[sel.selectedIndex];
+            var satuan = opt ? (opt.getAttribute('data-satuan') || 'satuan') : 'satuan';
+            var lbl = document.getElementById('satuan-label-keluar');
+            if (lbl) lbl.textContent = satuan;
+        }
+
+        /* ---- Modal Edit Bahan Baku ---- */
+        function bukaModalEditBahan(b) {
+            document.getElementById('edit-id-bahan').value = b.id;
+            document.getElementById('edit-nama-bahan').value = b.nama_bahan;
+            document.getElementById('edit-satuan-bahan').value = b.satuan;
+            document.getElementById('edit-batas-bahan').value = b.batas_minimum;
+            var preview = document.getElementById('preview-edit-bahan');
+            if (preview) {
+                if (b.gambar) {
+                    preview.innerHTML = '<img src="' + b.gambar + '" style="width:100%; height:100%; object-fit:cover;">';
+                } else {
+                    resetPreview('preview-edit-bahan', '📦');
+                }
+            }
+            document.getElementById('input-edit-gambar-bahan').value = '';
+            document.getElementById('modal-edit-bahan').style.display = 'flex';
+        }
+        function tutupModalEditBahan() {
+            document.getElementById('modal-edit-bahan').style.display = 'none';
+        }
+
+        /* ---- Modal Edit Produk ---- */
+        function bukaModalEditProduk(p) {
+            document.getElementById('edit-id-produk').value = p.id;
+            document.getElementById('edit-nama-produk').value = p.nama_produk;
+            document.getElementById('edit-kategori-produk').value = p.kategori;
+            document.getElementById('edit-harga-produk').value = p.harga;
+            var preview = document.getElementById('preview-edit-produk');
+            if (preview) {
+                if (p.gambar) {
+                    preview.innerHTML = '<img src="' + p.gambar + '" style="width:100%; height:100%; object-fit:cover;">';
+                } else {
+                    var icon = (p.kategori === 'Minuman') ? '🥤' : '🍗';
+                    resetPreview('preview-edit-produk', icon);
+                }
+            }
+            document.getElementById('input-edit-gambar-produk').value = '';
+            document.getElementById('modal-edit-produk').style.display = 'flex';
+        }
+        function tutupModalEditProduk() {
+            document.getElementById('modal-edit-produk').style.display = 'none';
+        }
+
+        /* ---- Modal Atur Resep (BOM) ---- */
+        var dataResepMap = <?php echo json_encode($resep_map); ?>;
+        function bukaModalAturResep(idMenu, namaMenu) {
+            document.getElementById('resep-nama-menu').textContent = namaMenu;
+            document.getElementById('resep-form-id-menu').value = idMenu;
+            renderResepItems(idMenu);
+            var sel = document.getElementById('resep-select-bahan');
+            if (sel) updateSatuanResep(sel);
+            document.getElementById('modal-atur-resep').style.display = 'flex';
+        }
+        function tutupModalAturResep() {
+            document.getElementById('modal-atur-resep').style.display = 'none';
+        }
+        function updateSatuanResep(sel) {
+            var opt = sel.options[sel.selectedIndex];
+            var satuan = opt ? (opt.getAttribute('data-satuan') || 'satuan') : 'satuan';
+            var lbl = document.getElementById('resep-satuan-label');
+            if (lbl) lbl.textContent = satuan;
+        }
+        function renderResepItems(idMenu) {
+            var tbody = document.getElementById('resep-tabel-body');
+            if (!tbody) return;
+            var items = dataResepMap[idMenu] || [];
+            if (items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#94a3b8; padding:14px; font-size:12.5px;">Belum ada bahan baku yang dipetakan pada resep menu ini.</td></tr>';
+                return;
+            }
+            var html = '';
+            items.forEach(function(item) {
+                html += '<tr>' +
+                    '<td><strong>' + item.nama_bahan + '</strong></td>' +
+                    '<td><span style="font-weight:700; color:var(--primary);">' + parseFloat(item.jumlah_dibutuhkan) + '</span> ' + item.satuan + '</td>' +
+                    '<td style="text-align:right;">' +
+                        '<form method="POST" action="" style="display:inline;" onsubmit="return confirm(\'Keluarkan ' + item.nama_bahan + ' dari resep menu ini?\');">' +
+                            '<input type="hidden" name="id_resep" value="' + item.id + '">' +
+                            '<button type="submit" name="hapus_resep_item" class="btn-table-action btn-danger-sm" title="Hapus dari Resep">✕</button>' +
+                        '</form>' +
+                    '</td>' +
+                '</tr>';
+            });
+            tbody.innerHTML = html;
+        }
+
+        /* ---- Filter & Search Menu Produk ---- */
+        var currentKategoriFilter = 'all';
+        function filterKategoriProduk(kat, btn) {
+            currentKategoriFilter = kat;
+            document.querySelectorAll('.filter-pill').forEach(function(p) { p.classList.remove('active'); });
+            if (btn) btn.classList.add('active');
+            filterMenuProduk();
+        }
+        function filterMenuProduk() {
+            var inputEl = document.getElementById('cari-menu-produk');
+            var query = (inputEl ? inputEl.value : '').toLowerCase();
+            var rows = document.querySelectorAll('.baris-produk');
+            rows.forEach(function(row) {
+                var nama = (row.querySelector('.nama-produk-teks') ? row.querySelector('.nama-produk-teks').textContent : '').toLowerCase();
+                var kat = row.getAttribute('data-kategori') || '';
+                var matchKat = (currentKategoriFilter === 'all' || kat === currentKategoriFilter);
+                var matchQuery = (nama.indexOf(query) !== -1);
+                row.style.display = (matchKat && matchQuery) ? '' : 'none';
+            });
+        }
+
+        /* ---- Filter & Search Bahan Baku ---- */
+        function filterBahanBaku() {
+            var inputEl = document.getElementById('cari-bahan-baku');
+            var query = (inputEl ? inputEl.value : '').toLowerCase();
+            var rows = document.querySelectorAll('.baris-bahan');
+            rows.forEach(function(row) {
+                var nama = (row.querySelector('.nama-bahan-teks') ? row.querySelector('.nama-bahan-teks').textContent : '').toLowerCase();
+                row.style.display = (nama.indexOf(query) !== -1) ? '' : 'none';
+            });
+        }
+
         function bukaModalPenggunaBaru() {
             var el = document.getElementById('modal-pengguna-baru');
             if (el) el.style.display = 'flex';
@@ -2503,8 +3505,14 @@ if (is_owner()) {
             var subtitleEl = document.getElementById('topbar-page-subtitle');
             if (titleEl && subtitleEl) {
                 if (tabName === 'dashboard') {
-                    titleEl.textContent = 'Dashboard Manajemen & Persediaan';
-                    subtitleEl.textContent = 'Sistem Informasi Terintegrasi UMKM Fillah Food - Capstone Project STSI4440 UT';
+                    titleEl.textContent = 'Dashboard Manajemen';
+                    subtitleEl.textContent = 'Ringkasan performa omzet bisnis, peringatan stok bahan baku, dan transaksi kasir';
+                } else if (tabName === 'produk') {
+                    titleEl.textContent = 'Katalog Menu & Resep';
+                    subtitleEl.textContent = 'Kelola daftar menu makanan, minuman, harga jual, dan formula resep bahan baku';
+                } else if (tabName === 'stok') {
+                    titleEl.textContent = 'Persediaan Bahan Baku (Stok)';
+                    subtitleEl.textContent = 'Pantau sisa stok bahan baku, catat kulakan stok masuk (inbound), dan bahan rusak (outbound)';
                 } else if (tabName === 'pengguna') {
                     titleEl.textContent = 'Pengelolaan Pengguna';
                     subtitleEl.textContent = 'Daftar akun staf terdaftar, pendaftaran staf baru, dan kontrol akun';

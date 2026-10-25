@@ -66,12 +66,18 @@ try {
 
     // 3. SIMPAN DETAIL TRANSAKSI & KURANGI STOK BAHAN BAKU (BOM)
     $stmt_detail = $conn->prepare("INSERT INTO detail_transaksi (id_transaksi, id_menu, qty, subtotal) VALUES (?, ?, ?, ?)");
-    $stmt_kurang = $conn->prepare("UPDATE bahan_baku SET stok = stok - ? WHERE id = ?");
+    $stmt_kurang = $conn->prepare("UPDATE bahan_baku SET stok = GREATEST(0, stok - ?) WHERE id = ?");
+
+    // Cek ketersediaan tabel riwayat_stok untuk pencatatan mutasi
+    $ada_tabel_riwayat = ($conn->query("SHOW TABLES LIKE 'riwayat_stok'")->num_rows > 0);
+    $nama_kasir = !empty($_SESSION['nama_lengkap']) ? $_SESSION['nama_lengkap'] : (isset($_SESSION['username']) ? $_SESSION['username'] : 'Kasir');
+    $stmt_log_pos = $ada_tabel_riwayat ? $conn->prepare("INSERT INTO riwayat_stok (id_bahan, tipe, jumlah, keterangan, dicatat_oleh) VALUES (?, 'keluar_penjualan', ?, ?, ?)") : null;
 
     foreach ($pesanan as $item) {
         $id_menu = intval($item['id_menu']);
         $qty = intval($item['qty']);
         $subtotal = floatval($item['harga']) * $qty;
+        $nama_menu_item = !empty($item['nama']) ? $item['nama'] : "Menu #$id_menu";
 
         // Simpan baris detail transaksi
         $stmt_detail->bind_param("iiid", $id_transaksi, $id_menu, $qty, $subtotal);
@@ -90,6 +96,13 @@ try {
             // Potong stok di tabel bahan_baku
             $stmt_kurang->bind_param("di", $stok_berkurang, $id_bahan);
             $stmt_kurang->execute();
+
+            // Catat log mutasi stok jika tabel riwayat_stok tersedia
+            if ($stmt_log_pos) {
+                $ket_pos = "Terjual via POS Kasir ($nama_menu_item x$qty) - #TRX-" . str_pad($id_transaksi, 4, "0", STR_PAD_LEFT);
+                $stmt_log_pos->bind_param("idss", $id_bahan, $stok_berkurang, $ket_pos, $nama_kasir);
+                $stmt_log_pos->execute();
+            }
         }
     }
 
