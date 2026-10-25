@@ -294,9 +294,9 @@ if (isset($_POST['login'])) {
             </button>
         </form>
 
-        <!-- Akun Demo Bawaan untuk Penilaian Dosen/Penguji (RBAC 3 Peran) -->
+        <!-- Akun Demo Bawaan untuk Penilaian Dosen/Penguji (3 Peran) -->
         <div class="demo-box">
-            <div style="font-weight: 700; margin-bottom: 4px;">🔑 Akun Demo RBAC (Klik untuk autofill):</div>
+            <div style="font-weight: 700; margin-bottom: 4px;">🔑 Pilihan Akun Demo (Klik untuk Autofill):</div>
             <div class="demo-row" onclick="fillLogin('owner_nihayatus', '12345')">
                 <span>👑 <strong>Owner:</strong> owner_nihayatus</span>
                 <span>Pass: 12345</span>

@@ -23,6 +23,17 @@ if (!isset($_SESSION['id_user']) && isset($_SESSION['username'])) {
 $pesan_sukses = "";
 $pesan_error = "";
 
+// Status Tab Aktif (Dashboard atau Kelola Pengguna)
+$tab_aktif = isset($_GET['tab']) ? trim($_GET['tab']) : 'dashboard';
+if (isset($_POST['tambah_pengguna']) || isset($_POST['edit_pengguna']) || isset($_POST['hapus_pengguna'])) {
+    $tab_aktif = 'pengguna';
+} elseif (isset($_POST['tambah_stok_masuk']) || isset($_POST['tambah_bahan_baru']) || isset($_POST['tambah_produk_baru'])) {
+    $tab_aktif = 'dashboard';
+}
+if ($tab_aktif === 'pengguna' && !is_owner()) {
+    $tab_aktif = 'dashboard';
+}
+
 // 1. Logika Tambah Stok Masuk (Inbound Stock - saat belanja bahan baku)
 if (isset($_POST['tambah_stok_masuk'])) {
     $id_bahan = intval($_POST['id_bahan']);
@@ -839,12 +850,12 @@ if (is_owner()) {
             </div>
 
             <nav class="nav-menu">
-                <a href="admin.php" class="nav-item active">
-                    <span>📊</span> Ringkasan & Dasbor
+                <a href="admin.php?tab=dashboard" data-tab="dashboard" class="nav-item <?php echo ($tab_aktif === 'dashboard') ? 'active' : ''; ?>" onclick="pindahTab('dashboard', event)">
+                    <span>📊</span> Dashboard
                 </a>
                 <?php if (is_owner()): ?>
-                <a href="#manajemen-pengguna" class="nav-item">
-                    <span>👥</span> Manajemen Pengguna (RBAC)
+                <a href="admin.php?tab=pengguna" data-tab="pengguna" class="nav-item <?php echo ($tab_aktif === 'pengguna') ? 'active' : ''; ?>" onclick="pindahTab('pengguna', event)">
+                    <span>👥</span> Kelola Pengguna
                 </a>
                 <?php endif; ?>
                 <a href="menu.php" target="_blank" class="nav-item">
@@ -870,8 +881,8 @@ if (is_owner()) {
             <div class="topbar-left">
                 <button type="button" class="btn-hamburger" onclick="toggleSidebar()" aria-label="Buka Menu">☰</button>
                 <div class="topbar-title">
-                    <h1>Dasbor Manajemen & Persediaan</h1>
-                    <p>Sistem Informasi Terintegrasi UMKM Fillah Food - Capstone Project STSI4440 UT</p>
+                    <h1 id="topbar-page-title"><?php echo ($tab_aktif === 'pengguna') ? 'Kelola Pengguna & Hak Akses' : 'Dashboard Manajemen & Persediaan'; ?></h1>
+                    <p id="topbar-page-subtitle"><?php echo ($tab_aktif === 'pengguna') ? 'Pengaturan akun pengguna dan penetapan peran (Owner, Admin, Kasir)' : 'Sistem Informasi Terintegrasi UMKM Fillah Food - Capstone Project STSI4440 UT'; ?></p>
                 </div>
             </div>
 
@@ -908,8 +919,11 @@ if (is_owner()) {
                 <div class="alert-box alert-danger">⚠️ <?php echo htmlspecialchars($pesan_error); ?></div>
             <?php endif; ?>
 
-            <!-- KPI Cards -->
-            <div class="kpi-grid">
+            <!-- TAB VIEW 1: DASHBOARD (Ringkasan Omzet, Stok Bahan & Transaksi) -->
+            <div id="view-dashboard" class="tab-view" style="<?php echo ($tab_aktif === 'dashboard') ? '' : 'display: none;'; ?>">
+
+                <!-- KPI Cards -->
+                <div class="kpi-grid">
                 <div class="kpi-card">
                     <div class="kpi-title">Omzet Penjualan Hari Ini</div>
                     <div class="kpi-value" style="color: var(--primary);">
@@ -1045,16 +1059,18 @@ if (is_owner()) {
                     </div>
                 </div>
 
-            </div>
+            </div> <!-- /section-grid -->
+        </div> <!-- /view-dashboard -->
 
-            <!-- Modul Manajemen Pengguna & Hak Akses (RBAC) -->
-            <?php if (is_owner()): ?>
-            <div class="panel-card" id="manajemen-pengguna" style="margin-top: 24px;">
+        <!-- TAB VIEW 2: KELOLA PENGGUNA (Khusus Role Owner) -->
+        <?php if (is_owner()): ?>
+        <div id="view-pengguna" class="tab-view" style="<?php echo ($tab_aktif === 'pengguna') ? '' : 'display: none;'; ?>">
+            <div class="panel-card" id="kelola-pengguna">
                 <div class="panel-header">
                     <div>
-                        <h2><span>👥</span> Manajemen Pengguna & Hak Akses (RBAC)</h2>
+                        <h2><span>👥</span> Kelola Pengguna & Hak Akses</h2>
                         <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
-                            Pengendalian hak akses berbasis peran (Role-Based Access Control) untuk Owner, Admin, dan Kasir.
+                            Pengaturan akun pengguna, kata sandi, dan pembagian hak akses (Owner, Admin, Kasir).
                         </p>
                     </div>
                     <button class="btn-primary-sm" style="background: linear-gradient(135deg, var(--primary), var(--secondary)); display: flex; align-items: center; gap: 6px;" onclick="bukaModalPenggunaBaru()">
@@ -1062,35 +1078,35 @@ if (is_owner()) {
                     </button>
                 </div>
 
-                <!-- Ringkasan Peran RBAC -->
+                <!-- Ringkasan Hak Akses Peran -->
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-bottom: 20px;">
                     <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 14px;">
                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
                             <span style="font-size: 18px;">👑</span>
-                            <strong style="font-size: 13px; color: #b45309;">Owner (Pemilik Usaha)</strong>
+                            <strong style="font-size: 13px; color: #b45309;">Pemilik Usaha (Owner)</strong>
                         </div>
                         <div style="font-size: 11.5px; color: #78350f; line-height: 1.4;">
-                            Akses mutlak & penuh: Pengawasan omzet real-time, stok persediaan, formula resep BOM, menu produk, serta manajemen akun & role RBAC.
+                            Akses mutlak & penuh: Pengawasan omzet real-time, stok persediaan, formula resep BOM, menu produk, serta hak mengelola akun pengguna dan peran staf.
                         </div>
                     </div>
 
                     <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 12px; padding: 14px;">
                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
                             <span style="font-size: 18px;">⚙️</span>
-                            <strong style="font-size: 13px; color: #0369a1;">Admin (Staf Persediaan)</strong>
+                            <strong style="font-size: 13px; color: #0369a1;">Staf Persediaan (Admin)</strong>
                         </div>
                         <div style="font-size: 11.5px; color: #075985; line-height: 1.4;">
-                            Akses operasional gudang: Input pasokan stok bahan masuk, tambah bahan baku baru, manajemen harga menu, dan pantau riwayat penjualan.
+                            Akses operasional gudang: Input pasokan stok bahan masuk, tambah bahan baku baru, manajemen harga menu, dan pantau riwayat penjualan kasir.
                         </div>
                     </div>
 
                     <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 14px;">
                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
                             <span style="font-size: 18px;">🛒</span>
-                            <strong style="font-size: 13px; color: #15803d;">Kasir (Staf Penjualan)</strong>
+                            <strong style="font-size: 13px; color: #15803d;">Staf Kasir (Kasir)</strong>
                         </div>
                         <div style="font-size: 11.5px; color: #14532d; line-height: 1.4;">
-                            Akses transaksi POS: Layar pencatatan pesanan kasir, perhitungan otomatis, cetak struk nota, dan pemotongan stok bahan otomatis.
+                            Akses transaksi POS: Layar pencatatan pesanan kasir, perhitungan pembayaran, cetak struk nota belanja, dan pemotongan stok bahan otomatis.
                         </div>
                     </div>
                 </div>
@@ -1103,8 +1119,8 @@ if (is_owner()) {
                                 <th>Pengguna</th>
                                 <th>Username</th>
                                 <th>Email</th>
-                                <th>Hak Akses (Role)</th>
-                                <th>Izin Akses Halaman</th>
+                                <th>Peran (Role)</th>
+                                <th>Izin Akses Layar</th>
                                 <th>Aksi</th>
                             </tr>
                         </thead>
@@ -1144,7 +1160,7 @@ if (is_owner()) {
                                     </td>
                                     <td style="font-size: 12px; color: var(--text-muted);">
                                         <?php 
-                                            if ($u['role'] === 'Owner') echo 'Semua Layar + Manajemen Pengguna';
+                                            if ($u['role'] === 'Owner') echo 'Semua Layar + Kelola Pengguna';
                                             elseif ($u['role'] === 'Admin') echo 'Dashboard & Stok Bahan (admin.php, kasir.php)';
                                             else echo 'Hanya Layar Kasir POS (kasir.php)';
                                         ?>
@@ -1175,18 +1191,8 @@ if (is_owner()) {
                     </table>
                 </div>
             </div>
-            <?php else: ?>
-            <!-- Jika Login Sebagai Admin (Non-Owner), Tampilkan Keterangan RBAC Bahwa Manajemen Pengguna Dibatasi -->
-            <div class="panel-card" style="margin-top: 24px; background: #f8fafc; border: 1.5px dashed #cbd5e1; padding: 24px; text-align: center;">
-                <div style="font-size: 32px; margin-bottom: 8px;">🛡️</div>
-                <h3 style="font-size: 15px; font-weight: 800; color: #1e293b; margin-bottom: 6px;">
-                    Hak Akses Manajemen Pengguna Dibatasi (RBAC)
-                </h3>
-                <p style="font-size: 12.5px; color: var(--text-muted); max-width: 600px; margin: 0 auto; line-height: 1.5;">
-                    Anda saat ini masuk dengan hak akses <strong>Admin (Staf Pengelola Persediaan)</strong>. Sesuai arsitektur keamanan <em>Role-Based Access Control (RBAC)</em>, modul penambahan akun dan perubahan peran pengguna hanya dapat diakses oleh akun <strong>Owner (Ibu Nihayatus Sofiyah)</strong>.
-                </p>
-            </div>
-            <?php endif; ?>
+        </div>
+        <?php endif; ?>
 
         </div>
     </div>
@@ -1293,7 +1299,7 @@ if (is_owner()) {
     <?php if (is_owner()): ?>
     <div class="modal-overlay" id="modal-pengguna-baru">
         <div class="modal-box">
-            <h3 class="modal-title">👥 Tambah Pengguna Baru (RBAC)</h3>
+            <h3 class="modal-title">👥 Tambah Pengguna Baru</h3>
             <form method="POST" action="">
                 <div class="form-group">
                     <label class="form-label">Nama Lengkap Pengguna</label>
@@ -1440,6 +1446,57 @@ if (is_owner()) {
         function closeSidebar() {
             document.body.classList.remove('sidebar-open');
         }
+
+        function pindahTab(tabName, ev) {
+            if (ev) ev.preventDefault();
+
+            // Ubah item navigasi yang aktif di sidebar
+            document.querySelectorAll('.nav-menu .nav-item').forEach(function(item) {
+                item.classList.remove('active');
+            });
+            var activeNav = document.querySelector('[data-tab="' + tabName + '"]');
+            if (activeNav) activeNav.classList.add('active');
+
+            // Sembunyikan semua tab view, tampilkan yang dipilih
+            var views = document.querySelectorAll('.tab-view');
+            views.forEach(function(v) {
+                v.style.display = 'none';
+            });
+            var targetView = document.getElementById('view-' + tabName);
+            if (targetView) {
+                targetView.style.display = 'block';
+            }
+
+            // Perbarui judul halaman di Topbar
+            var titleEl = document.getElementById('topbar-page-title');
+            var subtitleEl = document.getElementById('topbar-page-subtitle');
+            if (titleEl && subtitleEl) {
+                if (tabName === 'dashboard') {
+                    titleEl.textContent = 'Dashboard Manajemen & Persediaan';
+                    subtitleEl.textContent = 'Sistem Informasi Terintegrasi UMKM Fillah Food - Capstone Project STSI4440 UT';
+                } else if (tabName === 'pengguna') {
+                    titleEl.textContent = 'Kelola Pengguna & Hak Akses';
+                    subtitleEl.textContent = 'Pengaturan akun pengguna dan penetapan peran (Owner, Admin, Kasir)';
+                }
+            }
+
+            // Sinkronisasi URL query string tanpa reload halaman
+            if (window.history && window.history.pushState) {
+                var newUrl = window.location.pathname + '?tab=' + tabName;
+                window.history.pushState({tab: tabName}, '', newUrl);
+            }
+
+            // Tutup sidebar drawer jika di mobile
+            if (typeof closeSidebar === 'function') {
+                closeSidebar();
+            }
+        }
+
+        window.addEventListener('popstate', function(e) {
+            var params = new URLSearchParams(window.location.search);
+            var tab = params.get('tab') || 'dashboard';
+            pindahTab(tab);
+        });
     </script>
 </body>
 </html>
