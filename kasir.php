@@ -1,12 +1,7 @@
 <?php
-session_start();
+require 'auth_check.php';
+protect_page(['Kasir', 'Admin', 'Owner']);
 require 'config.php';
-
-// Pastikan hanya kasir (atau admin yang sedang bertugas) yang bisa mengakses
-if (!isset($_SESSION['username'])) {
-    header("Location: index.php");
-    exit();
-}
 
 // Ambil seluruh daftar produk aktif dari database
 $query_produk = "SELECT * FROM produk ORDER BY kategori ASC, nama_produk ASC";
@@ -711,11 +706,11 @@ if ($result_produk) {
 
         <div class="nav-actions">
             <span class="user-pill">
-                <span>👤</span> Kasir: <strong><?php echo htmlspecialchars($_SESSION['username']); ?></strong>
+                <span>👤</span> <strong><?php echo htmlspecialchars($_SESSION['username']); ?></strong> (<?php echo htmlspecialchars($_SESSION['role']); ?>)
             </span>
             <a href="menu.php" target="_blank" class="btn-link">📱 E-Menu Pelanggan</a>
-            <?php if ($_SESSION['role'] === 'Admin'): ?>
-                <a href="admin.php" class="btn-link">⚙️ Dashboard Admin</a>
+            <?php if (in_array($_SESSION['role'], ['Owner', 'Admin'])): ?>
+                <a href="admin.php" class="btn-link">⚙️ Dashboard Manajemen</a>
             <?php endif; ?>
             <a href="logout.php" class="btn-logout">Keluar (Logout)</a>
         </div>

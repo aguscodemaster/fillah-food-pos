@@ -4,10 +4,10 @@ require 'config.php';
 
 // Jika sudah login, langsung arahkan ke halamannya masing-masing
 if (isset($_SESSION['username'])) {
-    if ($_SESSION['role'] === 'Admin') {
+    if (in_array($_SESSION['role'], ['Owner', 'Admin'])) {
         header("Location: admin.php");
         exit();
-    } elseif ($_SESSION['role'] === 'Kasir') {
+    } else {
         header("Location: kasir.php");
         exit();
     }
@@ -27,12 +27,13 @@ if (isset($_POST['login'])) {
 
     if ($result && $result->num_rows > 0) {
         $row = $result->fetch_assoc();
-        $_SESSION['id_user']  = $row['id'];
-        $_SESSION['username'] = $row['username'];
-        $_SESSION['role']     = $row['role'];
+        $_SESSION['id_user']      = $row['id'];
+        $_SESSION['username']     = $row['username'];
+        $_SESSION['nama_lengkap'] = $row['nama_lengkap'];
+        $_SESSION['role']         = $row['role'];
         
         // Arahkan berdasarkan peran (Role-Based Access Control)
-        if ($row['role'] === 'Admin') {
+        if (in_array($row['role'], ['Owner', 'Admin'])) {
             header("Location: admin.php");
             exit();
         } else {
@@ -284,11 +285,15 @@ if (isset($_POST['login'])) {
             </button>
         </form>
 
-        <!-- Akun Demo Bawaan untuk Penilaian Dosen/Penguji -->
+        <!-- Akun Demo Bawaan untuk Penilaian Dosen/Penguji (RBAC 3 Peran) -->
         <div class="demo-box">
-            <div style="font-weight: 700; margin-bottom: 4px;">🔑 Akun Demo (Klik untuk autofill):</div>
-            <div class="demo-row" onclick="fillLogin('admin_nihayatus', '12345')">
-                <span>👤 <strong>Admin:</strong> admin_nihayatus</span>
+            <div style="font-weight: 700; margin-bottom: 4px;">🔑 Akun Demo RBAC (Klik untuk autofill):</div>
+            <div class="demo-row" onclick="fillLogin('owner_nihayatus', '12345')">
+                <span>👑 <strong>Owner:</strong> owner_nihayatus</span>
+                <span>Pass: 12345</span>
+            </div>
+            <div class="demo-row" onclick="fillLogin('admin_persediaan', '12345')">
+                <span>⚙️ <strong>Admin:</strong> admin_persediaan</span>
                 <span>Pass: 12345</span>
             </div>
             <div class="demo-row" onclick="fillLogin('kasir_1', '12345')">

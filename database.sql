@@ -1,19 +1,22 @@
 CREATE DATABASE IF NOT EXISTS fillah_food;
 USE fillah_food;
 
--- 1. Tabel Pengguna (Sesuai dengan Modul Login & RBAC)
+-- 1. Tabel Pengguna (Sesuai dengan Modul Login & RBAC Terpadu)
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
-    role ENUM('Admin', 'Kasir') NOT NULL
+    nama_lengkap VARCHAR(100) NOT NULL DEFAULT '',
+    email VARCHAR(100) NULL,
+    role ENUM('Owner', 'Admin', 'Kasir') NOT NULL DEFAULT 'Kasir'
 ) ENGINE=InnoDB;
 
--- Insert pengguna default (password: 12345)
-INSERT INTO users (username, password, role) VALUES 
-('admin_nihayatus', '12345', 'Admin'),
-('kasir_1', '12345', 'Kasir')
-ON DUPLICATE KEY UPDATE username=username;
+-- Insert pengguna default multi-role (password: 12345)
+INSERT INTO users (username, password, nama_lengkap, email, role) VALUES 
+('owner_nihayatus', '12345', 'Ibu Nihayatus Sofiyah (Pemilik)', 'owner@fillahfood.com', 'Owner'),
+('admin_persediaan', '12345', 'Staf Pengelola Persediaan', 'admin@fillahfood.com', 'Admin'),
+('kasir_1', '12345', 'Aisyah Marta Dewi (Kasir)', 'kasir@fillahfood.com', 'Kasir')
+ON DUPLICATE KEY UPDATE role=VALUES(role), nama_lengkap=VALUES(nama_lengkap);
 
 -- 2. Tabel Bahan Baku (Untuk Modul Persediaan / Inventory)
 CREATE TABLE IF NOT EXISTS bahan_baku (
