@@ -44,7 +44,8 @@ CREATE TABLE IF NOT EXISTS bahan_baku (
     nama_bahan VARCHAR(100) NOT NULL,
     stok DECIMAL(10,2) NOT NULL,
     satuan VARCHAR(20) NOT NULL,
-    batas_minimum DECIMAL(10,2) NOT NULL
+    batas_minimum DECIMAL(10,2) NOT NULL,
+    gambar VARCHAR(255) NULL
 ) ENGINE=InnoDB;
 
 INSERT INTO bahan_baku (id, nama_bahan, stok, satuan, batas_minimum) VALUES 
@@ -62,7 +63,8 @@ CREATE TABLE IF NOT EXISTS produk (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nama_produk VARCHAR(100) NOT NULL,
     harga DECIMAL(10,2) NOT NULL,
-    kategori ENUM('Makanan', 'Minuman') NOT NULL
+    kategori ENUM('Makanan', 'Minuman') NOT NULL,
+    gambar VARCHAR(255) NULL
 ) ENGINE=InnoDB;
 
 INSERT INTO produk (id, nama_produk, harga, kategori) VALUES 
