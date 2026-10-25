@@ -93,6 +93,25 @@ function renderKeranjang() {
         });
     }
 
+    // Update total count & label
+    const totalQty = keranjang.reduce((sum, item) => sum + item.qty, 0);
+    document.querySelectorAll('.cart-badge-count').forEach(el => {
+        el.textContent = totalQty;
+    });
+
+    const floatBar = document.getElementById('mobile-floating-cart');
+    if (floatBar) {
+        const floatCount = document.getElementById('float-cart-count');
+        const floatTotal = document.getElementById('float-cart-total');
+        if (floatCount) floatCount.textContent = totalQty;
+        if (floatTotal) floatTotal.textContent = formatRupiah(totalBelanja);
+        if (totalQty > 0) {
+            floatBar.classList.add('has-items');
+        } else {
+            floatBar.classList.remove('has-items');
+        }
+    }
+
     // Update label total
     document.getElementById('label-subtotal').textContent = formatRupiah(totalBelanja);
     document.getElementById('label-total').textContent = formatRupiah(totalBelanja);
@@ -215,30 +234,41 @@ function prosesBayarDanCetak() {
 // 11. Tampilkan Pop-up Struk Nota
 function bukaModalStruk(data) {
     document.getElementById('receipt-no-nota').textContent = data.no_nota;
-    document.getElementById('receipt-tanggal').textContent = data.tanggal;
+    document.getElementById('receipt-tanggal').textContent = data.tanggal || (new Date().toLocaleString('id-ID') + ' WIB');
     document.getElementById('receipt-kasir').textContent = data.kasir;
     document.getElementById('receipt-meja').textContent = data.no_meja;
 
-    if (data.catatan && data.catatan.trim() !== '') {
-        document.getElementById('receipt-catatan').textContent = data.catatan;
-        document.getElementById('receipt-catatan-wrapper').style.display = 'block';
-    } else {
-        document.getElementById('receipt-catatan-wrapper').style.display = 'none';
+    const catatanWrapper = document.getElementById('receipt-catatan-wrapper');
+    if (catatanWrapper) {
+        if (data.catatan && data.catatan.trim() !== '') {
+            document.getElementById('receipt-catatan').textContent = data.catatan;
+            catatanWrapper.style.display = 'flex';
+        } else {
+            catatanWrapper.style.display = 'none';
+        }
     }
 
     const itemsList = document.getElementById('receipt-items-list');
     itemsList.innerHTML = '';
-    data.rincian.forEach(item => {
-        const row = document.createElement('div');
-        row.style.display = 'flex';
-        row.style.justifyContent = 'space-between';
-        row.style.marginBottom = '3px';
-        row.innerHTML = `
-            <span>${item.nama} x${item.qty}</span>
-            <span>${formatRupiah(item.harga * item.qty)}</span>
-        `;
-        itemsList.appendChild(row);
-    });
+    if (data.rincian && Array.isArray(data.rincian)) {
+        data.rincian.forEach(item => {
+            const row = document.createElement('div');
+            row.className = 'receipt-item-row';
+            row.innerHTML = `
+                <div class="receipt-item-name">${item.nama}</div>
+                <div class="receipt-item-detail">
+                    <span>${item.qty} x ${formatRupiah(item.harga)}</span>
+                    <span class="receipt-item-subtotal">${formatRupiah(item.harga * item.qty)}</span>
+                </div>
+            `;
+            itemsList.appendChild(row);
+        });
+    }
+
+    const subtotalEl = document.getElementById('receipt-subtotal-val');
+    if (subtotalEl) {
+        subtotalEl.textContent = formatRupiah(data.total_bayar);
+    }
 
     document.getElementById('receipt-total').textContent = formatRupiah(data.total_bayar);
     document.getElementById('receipt-bayar').textContent = formatRupiah(data.uang_diterima);
@@ -254,4 +284,21 @@ function tutupModalStruk() {
     keranjang = [];
     renderKeranjang();
     resetInputBayar();
+    switchKasirView('menu');
 }
+
+// 13. Navigasi Tampilan Responsive Layar Kasir (Mobile / Tablet)
+function switchKasirView(view) {
+    const tabMenu = document.getElementById('tab-btn-menu');
+    const tabCart = document.getElementById('tab-btn-cart');
+    if (view === 'cart') {
+        document.body.classList.add('mobile-view-cart');
+        if (tabMenu) tabMenu.classList.remove('active');
+        if (tabCart) tabCart.classList.add('active');
+    } else {
+        document.body.classList.remove('mobile-view-cart');
+        if (tabMenu) tabMenu.classList.add('active');
+        if (tabCart) tabCart.classList.remove('active');
+    }
+}
+window.switchKasirView = switchKasirView;

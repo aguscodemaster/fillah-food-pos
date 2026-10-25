@@ -13,7 +13,13 @@ try {
     $conn = new mysqli($host, $user, $pass, $db);
 }
 
+// Set zona waktu default ke Waktu Indonesia Barat (WIB)
+date_default_timezone_set('Asia/Jakarta');
+
 if ($conn->connect_error) {
     die("Koneksi gagal: " . $conn->connect_error);
 }
+
+// Sinkronisasi zona waktu koneksi database ke WIB (+07:00)
+$conn->query("SET time_zone = '+07:00'");
 ?>
