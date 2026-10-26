@@ -181,6 +181,32 @@ if (isset($_POST['login'])) {
             box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.15);
         }
 
+        .btn-toggle-pwd {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-toggle-pwd:hover {
+            color: var(--primary);
+            background-color: var(--primary-light);
+        }
+
+        .btn-toggle-pwd:focus-visible {
+            outline: 2px solid var(--primary);
+        }
+
         .btn-submit {
             width: 100%;
             min-height: 46px; /* Touch target >= 44px */
@@ -298,8 +324,21 @@ if (isset($_POST['login'])) {
             <div class="form-group">
                 <label class="form-label" for="password">Kata Sandi (Password)</label>
                 <div class="input-wrapper" style="position: relative;">
-                    <input type="password" id="password" name="password" class="form-input" placeholder="Masukkan password" required style="padding-right: 42px;">
-                    <button type="button" onclick="togglePassword()" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 16px; color: var(--text-muted); padding: 0;" title="Lihat/Sembunyikan Password" id="toggleBtn">👁️</button>
+                    <input type="password" id="password" name="password" class="form-input" placeholder="Masukkan password" required style="padding-right: 44px;">
+                    <button type="button" class="btn-toggle-pwd" onclick="togglePassword()" title="Tampilkan/Sembunyikan Kata Sandi" aria-label="Toggle password visibility">
+                        <!-- Icon Eye (Open) -->
+                        <svg id="iconEye" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                        <!-- Icon Eye Off (Slash) -->
+                        <svg id="iconEyeOff" style="display: none;" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"></path>
+                            <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"></path>
+                            <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"></path>
+                            <line x1="2" y1="2" x2="22" y2="22"></line>
+                        </svg>
+                    </button>
                 </div>
             </div>
 
@@ -341,13 +380,16 @@ if (isset($_POST['login'])) {
 
         function togglePassword() {
             var pwd = document.getElementById('password');
-            var btn = document.getElementById('toggleBtn');
+            var eye = document.getElementById('iconEye');
+            var eyeOff = document.getElementById('iconEyeOff');
             if (pwd.type === 'password') {
                 pwd.type = 'text';
-                btn.textContent = '🙈';
+                eye.style.display = 'none';
+                eyeOff.style.display = 'block';
             } else {
                 pwd.type = 'password';
-                btn.textContent = '👁️';
+                eye.style.display = 'block';
+                eyeOff.style.display = 'none';
             }
         }
     </script>
