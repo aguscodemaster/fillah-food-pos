@@ -29,28 +29,33 @@ if ((!isset($_SESSION['id_user']) || $_SESSION['id_user'] == 3 || !isset($_SESSI
 
 
 // Helper rendering ikon SVG modern (tanpa emoji kasar)
-function ui_icon($name, $size = 16, $class = '', $style = '') {
-    $style_attr = 'width:' . $size . 'px; height:' . $size . 'px; vertical-align: middle; flex-shrink: 0;' . $style;
-    $class_attr = $class ? ' class="' . $class . '"' : '';
-    return '<svg' . $class_attr . ' style="' . $style_attr . '"><use href="#icon-' . $name . '"></use></svg>';
+if (!function_exists('ui_icon')) {
+    function ui_icon($name, $size = 16, $class = '', $style = '') {
+        $style_attr = 'width:' . $size . 'px; height:' . $size . 'px; vertical-align: middle; flex-shrink: 0;' . $style;
+        $class_attr = $class ? ' class="' . $class . '"' : '';
+        return '<svg' . $class_attr . ' style="' . $style_attr . '"><use href="#icon-' . $name . '"></use></svg>';
+    }
 }
 $pesan_sukses = "";
 $pesan_error = "";
 
-// Status Tab Aktif (Dashboard, Produk, Stok, Pengguna, Peran, atau User Setting)
+// Status Tab Aktif (Dashboard, Produk, Stok, Pengguna, Peran, atau Profil)
 $tab_aktif = isset($_GET['tab']) ? trim($_GET['tab']) : 'dashboard';
+if ($tab_aktif === 'user-setting') {
+    $tab_aktif = 'profil';
+}
 if (isset($_POST['tambah_pengguna']) || isset($_POST['edit_pengguna']) || isset($_POST['hapus_pengguna'])) {
     $tab_aktif = 'pengguna';
 } elseif (isset($_POST['tambah_peran']) || isset($_POST['edit_peran']) || isset($_POST['hapus_peran']) || isset($_POST['ubah_peran_pengguna'])) {
     $tab_aktif = 'peran';
-} elseif (isset($_POST['simpan_setting_user']) || isset($_POST['simpan_profil_saya'])) {
-    $tab_aktif = 'user-setting';
+} elseif (isset($_POST['simpan_profil_saya']) || isset($_POST['simpan_setting_user'])) {
+    $tab_aktif = 'profil';
 } elseif (isset($_POST['tambah_stok_masuk']) || isset($_POST['catat_stok_keluar']) || isset($_POST['tambah_bahan_baru']) || isset($_POST['edit_bahan']) || isset($_POST['hapus_bahan'])) {
     $tab_aktif = 'stok';
 } elseif (isset($_POST['tambah_produk_baru']) || isset($_POST['edit_produk']) || isset($_POST['hapus_produk']) || isset($_POST['simpan_resep_item']) || isset($_POST['hapus_resep_item'])) {
     $tab_aktif = 'produk';
 }
-if (in_array($tab_aktif, ['pengguna', 'peran', 'user-setting']) && !is_owner()) {
+if (in_array($tab_aktif, ['pengguna', 'peran']) && !is_owner()) {
     $tab_aktif = 'dashboard';
 }
 
@@ -458,41 +463,6 @@ if (is_owner()) {
         }
     }
 
-    // 2e. Simpan Profil, Kata Sandi, & Foto Profil Saya (Owner)
-    if (isset($_POST['simpan_profil_saya'])) {
-        $id_saya    = intval($_SESSION['id_user'] ?? 0);
-        $nama_saya  = trim($_POST['nama_profil']);
-        $email_saya = trim($_POST['email_profil']);
-        $pass_baru  = trim($_POST['password_baru_profil']);
-        $pass_konf  = trim($_POST['konfirmasi_password_profil']);
-        $foto_saya  = prosesUploadGambar('foto_profil_saya', 'user');
-
-        if (empty($nama_saya)) {
-            $pesan_error = "Nama lengkap profil tidak boleh kosong!";
-        } elseif (!empty($pass_baru) && $pass_baru !== $pass_konf) {
-            $pesan_error = "Konfirmasi kata sandi baru tidak cocok!";
-        } else {
-            if (!empty($pass_baru)) {
-                $stmt_me = $conn->prepare("UPDATE users SET nama_lengkap = ?, email = ?, password = ? WHERE id = ?");
-                $stmt_me->bind_param("sssi", $nama_saya, $email_saya, $pass_baru, $id_saya);
-            } else {
-                $stmt_me = $conn->prepare("UPDATE users SET nama_lengkap = ?, email = ? WHERE id = ?");
-                $stmt_me->bind_param("ssi", $nama_saya, $email_saya, $id_saya);
-            }
-            if ($stmt_me->execute()) {
-                $_SESSION['nama_lengkap'] = $nama_saya;
-                if (!empty($foto_saya)) {
-                    $stmt_fs = $conn->prepare("UPDATE users SET foto = ? WHERE id = ?");
-                    $stmt_fs->bind_param("si", $foto_saya, $id_saya);
-                    $stmt_fs->execute();
-                    $_SESSION['foto'] = $foto_saya;
-                }
-                $pesan_sukses = "Profil, kata sandi, dan foto profil Anda berhasil diperbarui!";
-            } else {
-                $pesan_error = "Gagal memperbarui profil: " . $conn->error;
-            }
-        }
-    }
 
     // 2f. Tambah Peran Baru (Khusus Tab Peran)
     if (isset($_POST['tambah_peran'])) {
@@ -619,6 +589,42 @@ if (is_owner()) {
                     $pesan_error = "Gagal memperbarui peran pengguna: " . $conn->error;
                 }
             }
+        }
+    }
+}
+
+// 2e. Simpan Profil, Kata Sandi, & Foto Profil Saya (Owner & Admin)
+if (isset($_POST['simpan_profil_saya'])) {
+    $id_saya    = intval($_SESSION['id_user'] ?? 0);
+    $nama_saya  = trim($_POST['nama_profil']);
+    $email_saya = trim($_POST['email_profil']);
+    $pass_baru  = trim($_POST['password_baru_profil']);
+    $pass_konf  = trim($_POST['konfirmasi_password_profil']);
+    $foto_saya  = prosesUploadGambar('foto_profil_saya', 'user');
+
+    if (empty($nama_saya)) {
+        $pesan_error = "Nama lengkap profil tidak boleh kosong!";
+    } elseif (!empty($pass_baru) && $pass_baru !== $pass_konf) {
+        $pesan_error = "Konfirmasi kata sandi baru tidak cocok!";
+    } else {
+        if (!empty($pass_baru)) {
+            $stmt_me = $conn->prepare("UPDATE users SET nama_lengkap = ?, email = ?, password = ? WHERE id = ?");
+            $stmt_me->bind_param("sssi", $nama_saya, $email_saya, $pass_baru, $id_saya);
+        } else {
+            $stmt_me = $conn->prepare("UPDATE users SET nama_lengkap = ?, email = ? WHERE id = ?");
+            $stmt_me->bind_param("ssi", $nama_saya, $email_saya, $id_saya);
+        }
+        if ($stmt_me->execute()) {
+            $_SESSION['nama_lengkap'] = $nama_saya;
+            if (!empty($foto_saya)) {
+                $stmt_fs = $conn->prepare("UPDATE users SET foto = ? WHERE id = ?");
+                $stmt_fs->bind_param("si", $foto_saya, $id_saya);
+                $stmt_fs->execute();
+                $_SESSION['foto'] = $foto_saya;
+            }
+            $pesan_sukses = "Profil, kata sandi, dan foto profil Anda berhasil diperbarui!";
+        } else {
+            $pesan_error = "Gagal memperbarui profil: " . $conn->error;
         }
     }
 }
@@ -770,16 +776,21 @@ if (is_owner()) {
         }
     }
 
-    if (isset($_SESSION['id_user'])) {
-        $stmt_cu = $conn->prepare("SELECT email, foto FROM users WHERE id = ?");
-        $stmt_cu->bind_param("i", $_SESSION['id_user']);
-        $stmt_cu->execute();
-        $r_cu = $stmt_cu->get_result()->fetch_assoc();
-        if ($r_cu) {
-            $current_user_email = $r_cu['email'] ?? '';
-            $current_user_foto  = $r_cu['foto'] ?? '';
-            $_SESSION['foto']   = $current_user_foto;
+}
+
+// Ambil data user aktif saat ini untuk tab Profil Saya (Owner & Admin)
+if (isset($_SESSION['id_user'])) {
+    $stmt_cu = $conn->prepare("SELECT email, foto, nama_lengkap FROM users WHERE id = ?");
+    $stmt_cu->bind_param("i", $_SESSION['id_user']);
+    $stmt_cu->execute();
+    $r_cu = $stmt_cu->get_result()->fetch_assoc();
+    if ($r_cu) {
+        $current_user_email = $r_cu['email'] ?? '';
+        $current_user_foto  = $r_cu['foto'] ?? '';
+        if (!empty($r_cu['nama_lengkap'])) {
+            $_SESSION['nama_lengkap'] = $r_cu['nama_lengkap'];
         }
+        $_SESSION['foto'] = $current_user_foto;
     }
 }
 ?>
@@ -2011,27 +2022,27 @@ if (is_owner()) {
                 <a href="admin.php?tab=stok" data-tab="stok" class="nav-item <?php echo ($tab_aktif === 'stok') ? 'active' : ''; ?>" onclick="pindahTab('stok', event)">
                     <span><?php echo ui_icon("box", 18); ?></span> Stok Bahan Baku
                 </a>
-                <?php if (is_owner()): ?>
-                <div class="nav-group <?php echo in_array($tab_aktif, ['pengguna', 'peran', 'user-setting']) ? 'open' : ''; ?>" id="nav-group-pengaturan">
-                    <div class="nav-item nav-parent <?php echo in_array($tab_aktif, ['pengguna', 'peran', 'user-setting']) ? 'active' : ''; ?>" onclick="toggleSubmenu('nav-group-pengaturan')">
+                <div class="nav-group <?php echo in_array($tab_aktif, ['pengguna', 'peran', 'profil']) ? 'open' : ''; ?>" id="nav-group-pengaturan">
+                    <div class="nav-item nav-parent <?php echo in_array($tab_aktif, ['pengguna', 'peran', 'profil']) ? 'active' : ''; ?>" onclick="toggleSubmenu('nav-group-pengaturan')">
                         <div class="nav-parent-title">
                             <span><?php echo ui_icon("settings", 18); ?></span> Pengaturan
                         </div>
                         <span class="nav-arrow">▼</span>
                     </div>
                     <div class="nav-submenu">
+                        <?php if (is_owner()): ?>
                         <a href="admin.php?tab=pengguna" data-tab="pengguna" class="nav-subitem <?php echo ($tab_aktif === 'pengguna') ? 'active' : ''; ?>" onclick="pindahTab('pengguna', event)">
                             <span><?php echo ui_icon("users", 16); ?></span> Pengelolaan Pengguna
                         </a>
                         <a href="admin.php?tab=peran" data-tab="peran" class="nav-subitem <?php echo ($tab_aktif === 'peran') ? 'active' : ''; ?>" onclick="pindahTab('peran', event)">
                             <span><?php echo ui_icon("shield", 16); ?></span> Peran
                         </a>
-                        <a href="admin.php?tab=user-setting" data-tab="user-setting" class="nav-subitem <?php echo ($tab_aktif === 'user-setting') ? 'active' : ''; ?>" onclick="pindahTab('user-setting', event)">
-                            <span><?php echo ui_icon("user", 16); ?></span> User Setting
+                        <?php endif; ?>
+                        <a href="admin.php?tab=profil" data-tab="profil" class="nav-subitem <?php echo ($tab_aktif === 'profil') ? 'active' : ''; ?>" onclick="pindahTab('profil', event)">
+                            <span><?php echo ui_icon("user", 16); ?></span> Profil Saya
                         </a>
                     </div>
                 </div>
-                <?php endif; ?>
                 <a href="menu.php" target="_blank" class="nav-item">
                     <span><?php echo ui_icon("phone", 18); ?></span> E-Menu Pelanggan
                 </a>
@@ -2059,7 +2070,7 @@ if (is_owner()) {
                         <?php 
                             if ($tab_aktif === 'pengguna') echo 'Pengelolaan Pengguna';
                             elseif ($tab_aktif === 'peran') echo 'Peran & Hak Akses (RBAC)';
-                            elseif ($tab_aktif === 'user-setting') echo 'User Setting & Profil Akun';
+                            elseif ($tab_aktif === 'profil') echo 'Profil Saya';
                             elseif ($tab_aktif === 'produk') echo 'Katalog Menu & Resep';
                             elseif ($tab_aktif === 'stok') echo 'Persediaan Bahan Baku (Stok)';
                             else echo 'Dashboard Manajemen'; 
@@ -2069,7 +2080,7 @@ if (is_owner()) {
                         <?php 
                             if ($tab_aktif === 'pengguna') echo 'Daftar akun staf terdaftar, pendaftaran staf baru, dan kontrol akun';
                             elseif ($tab_aktif === 'peran') echo 'Konfigurasi pembagian hak akses fitur dan penetapan peran staf (Owner, Admin, Kasir)';
-                            elseif ($tab_aktif === 'user-setting') echo 'Pengaturan kredensial akun staf dan profil pribadi';
+                            elseif ($tab_aktif === 'profil') echo 'Kelola identitas akun, foto profil, dan kata sandi keamanan Anda';
                             elseif ($tab_aktif === 'produk') echo 'Kelola daftar menu makanan, minuman, harga jual, dan formula resep bahan baku';
                             elseif ($tab_aktif === 'stok') echo 'Pantau sisa stok bahan baku, catat kulakan stok masuk (inbound), dan bahan rusak (outbound)';
                             else echo 'Ringkasan performa omzet bisnis, peringatan stok bahan baku, dan transaksi kasir'; 
@@ -2078,7 +2089,7 @@ if (is_owner()) {
                 </div>
             </div>
 
-            <div class="admin-profile">
+            <div class="admin-profile" onclick="pindahTab('profil', event)" style="cursor: pointer;" title="Buka Pengaturan Profil Saya">
                 <div class="avatar" style="<?php echo (is_owner()) ? 'background: linear-gradient(135deg, #f59e0b, #d97706);' : 'background: linear-gradient(135deg, #0284c7, #0369a1);'; ?> overflow: hidden; padding: 0;">
                     <?php if (!empty($_SESSION['foto']) && file_exists(__DIR__ . '/' . $_SESSION['foto'])): ?>
                         <img src="<?php echo htmlspecialchars($_SESSION['foto']); ?>" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;">
@@ -2969,222 +2980,189 @@ if (is_owner()) {
             </div>
         </div>
 
-        <!-- TAB VIEW 3: USER SETTING (Khusus Role Owner) -->
-        <div id="view-user-setting" class="tab-view" style="<?php echo ($tab_aktif === 'user-setting') ? '' : 'display: none;'; ?>">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 24px; align-items: stretch;">
+                <?php endif; ?>
+
+        <!-- TAB VIEW 3: PROFIL SAYA (Pusat Pengaturan Identitas & Keamanan Akun) -->
+        <div id="view-profil" class="tab-view" style="<?php echo ($tab_aktif === 'profil') ? '' : 'display: none;'; ?>">
+            <div style="display: grid; grid-template-columns: 310px 1fr; gap: 24px; align-items: start;">
                 
-                <!-- Card 1: Pengaturan Akun Staf & Pengguna oleh Owner -->
-                <div class="panel-card" style="display: flex; flex-direction: column; height: 100%; box-sizing: border-box;">
-                    <div class="panel-header" style="border-bottom: 1.5px solid var(--border); padding-bottom: 14px; margin-bottom: 18px;">
-                        <div>
-                            <h2><span><?php echo ui_icon("users", 20); ?></span> Pengaturan Akun Pengguna</h2>
-                            <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
-                                Sebagai Owner, Anda dapat mengatur profil, email, dan mereset kata sandi staf.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div style="background: #f8fafc; border: 1.5px solid var(--border); border-radius: 12px; padding: 12px 16px; margin-bottom: 18px; display: flex; align-items: center; gap: 12px; min-height: 74px; box-sizing: border-box;">
-                        <div style="width: 42px; height: 42px; border-radius: 10px; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                            <?php echo ui_icon("users", 20); ?>
-                        </div>
-                        <div style="flex: 1;">
-                            <label for="setting-pilih-user" style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px;">
-                                Pilih Akun yang Ingin Diatur:
-                            </label>
-                            <select id="setting-pilih-user" class="form-control" onchange="muatDataUserSetting(this.value)" style="font-weight: 600; height: 38px; font-size: 12.5px; padding: 6px 10px;">
-                                <?php foreach ($users_list as $u): ?>
-                                    <option value="<?php echo $u['id']; ?>">
-                                        <?php echo htmlspecialchars($u['nama_lengkap'] ?: $u['username']); ?> (@<?php echo htmlspecialchars($u['username']); ?>) — [<?php echo $u['role']; ?>]
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                    </div>
-
-                    <form method="POST" action="" enctype="multipart/form-data" style="display: flex; flex-direction: column; flex: 1; justify-content: space-between;">
-                        <div>
-                            <input type="hidden" name="id_user_setting" id="setting-id-user" value="<?php echo !empty($users_list) ? $users_list[0]['id'] : ''; ?>">
-
-                            <div class="form-group" style="margin-bottom: 14px;">
-                                <label class="form-label" style="font-weight: 700; margin-bottom: 6px;">Foto Profil Akun <span style="font-weight: 400; color: var(--text-muted);">(Opsional — Maks 2 MB)</span></label>
-                                <div style="display: flex; align-items: center; gap: 14px; background: #f8fafc; padding: 10px 14px; border-radius: 10px; border: 1.5px solid var(--border);">
-                                    <div id="setting-avatar-preview" style="width: 52px; height: 52px; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; border: 2px solid var(--border); flex-shrink: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.06);
-                                        <?php 
-                                            $u0_role = !empty($users_list) ? $users_list[0]['role'] : 'User';
-                                            if ($u0_role === 'Owner') echo 'background: #fef3c7; color: #b45309; border-color: #fde68a;';
-                                            elseif ($u0_role === 'Admin') echo 'background: #e0f2fe; color: #0369a1; border-color: #bae6fd;';
-                                            else echo 'background: #dcfce7; color: #15803d; border-color: #bbf7d0;';
-                                        ?>">
-                                        <?php if (!empty($users_list[0]['foto']) && file_exists(__DIR__ . '/' . $users_list[0]['foto'])): ?>
-                                            <img src="<?php echo htmlspecialchars($users_list[0]['foto']); ?>" style="width: 100%; height: 100%; object-fit: cover;">
-                                        <?php else: ?>
-                                            <?php echo strtoupper(substr(!empty($users_list) ? ($users_list[0]['nama_lengkap'] ?: $users_list[0]['username']) : 'U', 0, 1)); ?>
-                                        <?php endif; ?>
-                                    </div>
-                                    <div style="flex: 1;">
-                                        <button type="button" class="btn-primary-sm" style="background: #ffffff; color: var(--text-dark); border: 1.5px solid var(--border); padding: 6px 12px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;" onclick="document.getElementById('input-foto-user').click()">
-                                            <?php echo ui_icon("folder", 14); ?> <span>Pilih Foto Baru</span>
-                                        </button>
-                                        <input type="file" id="input-foto-user" name="foto_user_setting" accept="image/*" style="display: none;" onchange="previewFotoUser(this)">
-                                        <div id="nama-file-user" style="font-size: 11px; color: var(--text-muted); margin-top: 3px;">Pilih foto baru jika ingin mengganti</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="form-group" style="margin-bottom: 14px;">
-                                <label class="form-label" style="font-weight: 700; margin-bottom: 4px;">Username (ID Akun)</label>
-                                <input type="text" id="setting-username" class="form-control" disabled style="background: #f1f5f9; cursor: not-allowed; font-family: monospace; font-weight: 600; height: 38px;" value="<?php echo !empty($users_list) ? '@' . htmlspecialchars($users_list[0]['username']) : ''; ?>">
-                                <small style="color: var(--text-muted); font-size: 11px; display: block; margin-top: 3px;">Username permanen demi integritas catatan transaksi kasir & audit log.</small>
-                            </div>
-
-                            <div class="form-group" style="margin-bottom: 14px;">
-                                <label class="form-label" style="font-weight: 700; margin-bottom: 4px;">Nama Lengkap Pengguna</label>
-                                <input type="text" name="nama_lengkap_setting" id="setting-nama" class="form-control" required style="height: 38px;" value="<?php echo !empty($users_list) ? htmlspecialchars($users_list[0]['nama_lengkap']) : ''; ?>">
-                            </div>
-
-                            <div class="form-group" style="margin-bottom: 14px;">
-                                <label class="form-label" style="font-weight: 700; margin-bottom: 4px;">Alamat Email Pengguna</label>
-                                <input type="email" name="email_setting" id="setting-email" class="form-control" placeholder="user@fillahfood.com" style="height: 38px;" value="<?php echo !empty($users_list) ? htmlspecialchars($users_list[0]['email'] ?? '') : ''; ?>">
-                            </div>
-
-                            <div class="form-group" style="margin-bottom: 14px;">
-                                <label class="form-label" style="font-weight: 700; margin-bottom: 4px;">Peran Hak Akses Akun</label>
-                                <div style="padding: 4px 0;">
-                                    <?php 
-                                        $first_role = !empty($users_list) ? $users_list[0]['role'] : 'User';
-                                        if ($first_role === 'Owner'): ?>
-                                            <span class="badge badge-role-owner" id="setting-role-badge"><?php echo ui_icon("crown", 12); ?> Owner (Pemilik Usaha)</span>
-                                        <?php elseif ($first_role === 'Admin'): ?>
-                                            <span class="badge badge-role-admin" id="setting-role-badge"><?php echo ui_icon("settings", 12); ?> Admin (Staf Persediaan)</span>
-                                        <?php elseif ($first_role === 'User'): ?>
-                                            <span class="badge badge-role-user" id="setting-role-badge"><?php echo ui_icon("user", 12); ?> User (Staf Operasional / POS)</span>
-                                        <?php elseif ($first_role === 'Kasir'): ?>
-                                            <span class="badge badge-role-kasir" id="setting-role-badge"><?php echo ui_icon("cart", 12); ?> Kasir (Layar Kasir POS)</span>
-                                        <?php else: ?>
-                                            <span class="badge badge-role-custom" id="setting-role-badge"><?php echo ui_icon("shield", 12); ?> <?php echo htmlspecialchars($first_role); ?></span>
-                                        <?php endif; ?>
-                                </div>
-                                <div style="display: flex; align-items: flex-start; gap: 6px; margin-top: 5px; color: var(--text-muted); font-size: 11px; line-height: 1.4;">
-                                    <span style="flex-shrink: 0; margin-top: 1px;"><?php echo ui_icon("lock", 13); ?></span>
-                                    <span>Peran akun dikunci di User Setting. Ubah peran melalui menu <strong>Pengelolaan Pengguna</strong> atau <strong>Peran</strong>.</span>
-                                </div>
-                            </div>
-
-                            <div class="form-group" style="margin-bottom: 18px;">
-                                <label class="form-label" style="font-weight: 700; margin-bottom: 4px;">Reset / Atur Kata Sandi Baru</label>
-                                <input type="password" name="password_setting" id="setting-password" class="form-control" placeholder="Ketik kata sandi baru (kosongkan jika tidak diubah)" style="height: 38px;">
-                                <small style="color: var(--text-muted); font-size: 11px; display: block; margin-top: 3px;">Owner dapat langsung menetapkan kata sandi baru jika staf lupa password.</small>
-                            </div>
-                        </div>
-
-                        <div style="margin-top: auto; padding-top: 14px;">
-                            <button type="submit" name="simpan_setting_user" class="btn-primary-sm" style="width: 100%; height: 44px; justify-content: center; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">
-                                <?php echo ui_icon("save", 16); ?> <span>Simpan Pengaturan Pengguna</span>
-                            </button>
-                        </div>
-                    </form>
-                </div>
-
-                <!-- Card 2: Profil & Sandi Saya (Owner) -->
-                <div class="panel-card" style="display: flex; flex-direction: column; height: 100%; box-sizing: border-box;">
-                    <div class="panel-header" style="border-bottom: 1.5px solid var(--border); padding-bottom: 14px; margin-bottom: 18px;">
-                        <div>
-                            <h2><span><?php echo ui_icon("user", 20); ?></span> Profil & Sandi Saya (Owner)</h2>
-                            <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
-                                Pengaturan profil dan kata sandi akun Owner Anda yang sedang aktif.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 12px; padding: 12px 16px; margin-bottom: 18px; display: flex; align-items: center; gap: 12px; min-height: 74px; box-sizing: border-box;">
-                        <div id="profil-saya-avatar-badge" style="width: 42px; height: 42px; border-radius: 50%; overflow: hidden; background: #fef3c7; color: #b45309; border: 2px solid #fde68a; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; flex-shrink: 0; box-shadow: 0 2px 6px rgba(180,83,9,0.12);">
+                <!-- Kolom Kiri: Kartu Identitas & Status Akun -->
+                <div class="panel-card" style="text-align: center; padding: 28px 22px;">
+                    <!-- Avatar dengan Tombol Kamera -->
+                    <div style="position: relative; width: 88px; height: 88px; margin: 0 auto 16px auto;">
+                        <div id="profil-avatar-display" style="width: 100%; height: 100%; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 800; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+                            <?php echo (is_owner()) ? 'background: #fef3c7; color: #b45309; border: 3px solid #fed7aa;' : 'background: #e0f2fe; color: #0369a1; border: 3px solid #bae6fd;'; ?>">
                             <?php if (!empty($current_user_foto) && file_exists(__DIR__ . '/' . $current_user_foto)): ?>
-                                <img src="<?php echo htmlspecialchars($current_user_foto); ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                                <img src="<?php echo htmlspecialchars($current_user_foto); ?>" alt="Foto Profil" style="width: 100%; height: 100%; object-fit: cover;">
                             <?php else: ?>
-                                <?php echo strtoupper(substr($_SESSION['nama_lengkap'] ?? $_SESSION['username'] ?? 'O', 0, 1)); ?>
+                                <?php echo strtoupper(substr($_SESSION['nama_lengkap'] ?? $_SESSION['username'] ?? 'U', 0, 1)); ?>
                             <?php endif; ?>
                         </div>
-                        <div style="flex: 1;">
-                            <div style="font-weight: 700; font-size: 13.5px; color: #92400e;">
-                                <?php echo htmlspecialchars($_SESSION['nama_lengkap'] ?? 'Pemilik Usaha'); ?>
+                        <button type="button" onclick="document.getElementById('input-foto-profil-baru').click()" title="Ganti Foto Profil" style="position: absolute; bottom: 0; right: 0; width: 30px; height: 30px; border-radius: 50%; background: var(--primary); color: #ffffff; border: 2.5px solid #ffffff; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.18); transition: transform 0.15s ease;">
+                            <?php echo ui_icon("camera", 14); ?>
+                        </button>
+                    </div>
+
+                    <!-- Nama Lengkap & Username -->
+                    <h3 style="font-size: 16px; font-weight: 800; color: var(--text-dark); margin-bottom: 4px;">
+                        <?php echo htmlspecialchars($_SESSION['nama_lengkap'] ?? 'Pengguna'); ?>
+                    </h3>
+                    <div style="margin-bottom: 12px;">
+                        <code style="font-size: 12px; color: var(--text-muted); background: #f1f5f9; padding: 3px 10px; border-radius: 6px; font-weight: 600;">
+                            @<?php echo htmlspecialchars($_SESSION['username'] ?? 'user'); ?>
+                        </code>
+                    </div>
+
+                    <!-- Badge Peran -->
+                    <div style="margin-bottom: 20px;">
+                        <?php if (is_owner()): ?>
+                            <span class="badge badge-role-owner" style="font-size: 11px; padding: 4px 12px; font-weight: 700;">
+                                <?php echo ui_icon("crown", 12); ?> Owner (Pemilik Usaha)
+                            </span>
+                        <?php elseif (($_SESSION['role'] ?? '') === 'Admin'): ?>
+                            <span class="badge badge-role-admin" style="font-size: 11px; padding: 4px 12px; font-weight: 700;">
+                                <?php echo ui_icon("settings", 12); ?> Admin (Staf Persediaan)
+                            </span>
+                        <?php else: ?>
+                            <span class="badge badge-role-user" style="font-size: 11px; padding: 4px 12px; font-weight: 700;">
+                                <?php echo ui_icon("user", 12); ?> Staf Kasir POS
+                            </span>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- Detail Status Akun & Keamanan -->
+                    <div style="border-top: 1px solid var(--border); padding-top: 16px; margin-bottom: 20px; text-align: left;">
+                        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;">
+                            Ringkasan Akun:
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 11px; font-size: 12px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <span style="color: var(--text-muted);">Status Akun:</span>
+                                <span style="color: #15803d; font-weight: 700; background: #dcfce7; padding: 2px 9px; border-radius: 12px; font-size: 11px; display: inline-flex; align-items: center; gap: 5px;">
+                                    <span style="width: 6px; height: 6px; border-radius: 50%; background: #16a34a;"></span> Aktif
+                                </span>
                             </div>
-                            <div style="font-size: 11.5px; color: #b45309; margin-top: 2px;">
-                                Username: <code>@<?php echo htmlspecialchars($_SESSION['username'] ?? 'owner'); ?></code> &bull; Peran: <strong>Owner (Pemilik Usaha)</strong>
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <span style="color: var(--text-muted);">Hak Wewenang:</span>
+                                <span style="font-weight: 700; color: var(--text-dark); font-size: 11.5px;">
+                                    <?php echo (is_owner()) ? 'Akses Penuh Seluruh Modul' : 'Akses Operasional'; ?>
+                                </span>
+                            </div>
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <span style="color: var(--text-muted);">Proteksi Sandi:</span>
+                                <span style="font-weight: 600; color: #0369a1; display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px;">
+                                    <?php echo ui_icon("lock", 12); ?> Terenkripsi
+                                </span>
                             </div>
                         </div>
                     </div>
 
-                    <form method="POST" action="" enctype="multipart/form-data" style="display: flex; flex-direction: column; flex: 1; justify-content: space-between;">
+                    <!-- Shortcut POS -->
+                    <a href="kasir.php" class="btn-primary-sm" style="width: 100%; height: 40px; justify-content: center; font-size: 12.5px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+                        <?php echo ui_icon("cart", 16); ?> <span>Buka Layar Kasir POS</span>
+                    </a>
+                </div>
+
+                <!-- Kolom Kanan: Formulir Pengaturan Profil & Keamanan -->
+                <div class="panel-card" style="padding: 26px 28px;">
+                    <div class="panel-header" style="border-bottom: 1.5px solid var(--border); padding-bottom: 14px; margin-bottom: 22px;">
                         <div>
-                            <div class="form-group" style="margin-bottom: 14px;">
-                                <label class="form-label" style="font-weight: 700; margin-bottom: 6px;">Foto Profil Saya <span style="font-weight: 400; color: var(--text-muted);">(Opsional — Maks 2 MB)</span></label>
-                                <div style="display: flex; align-items: center; gap: 14px; background: #f8fafc; padding: 10px 14px; border-radius: 10px; border: 1.5px solid var(--border);">
-                                    <div id="profil-saya-preview" style="width: 52px; height: 52px; border-radius: 50%; overflow: hidden; background: #fef3c7; color: #b45309; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; border: 2px solid #fde68a; flex-shrink: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.06);">
+                            <h2><span><?php echo ui_icon("user", 20); ?></span> Pengaturan Profil & Keamanan</h2>
+                            <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                                Perbarui identitas profil, email, foto avatar, dan kata sandi akun Anda.
+                            </p>
+                        </div>
+                    </div>
+
+                    <form method="POST" action="" enctype="multipart/form-data">
+                        
+                        <!-- Section 1: Informasi Identitas Diri -->
+                        <div style="margin-bottom: 22px;">
+                            <h3 style="font-size: 13px; font-weight: 800; color: var(--text-dark); margin-bottom: 14px; display: flex; align-items: center; gap: 6px;">
+                                <?php echo ui_icon("sparkles", 15); ?> <span>Informasi Identitas Diri</span>
+                            </h3>
+
+                            <!-- Foto Profil Uploader Box -->
+                            <div class="form-group" style="margin-bottom: 16px;">
+                                <label class="form-label" style="font-weight: 700; margin-bottom: 6px;">Foto Profil Akun <span style="font-weight: 400; color: var(--text-muted);">(Opsional — Format JPG, PNG, atau WebP, Maks 2 MB)</span></label>
+                                <div style="display: flex; align-items: center; gap: 16px; background: #f8fafc; padding: 12px 16px; border-radius: 12px; border: 1.5px solid var(--border);">
+                                    <div id="profil-form-avatar-preview" style="width: 52px; height: 52px; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; border: 2px solid var(--border); flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+                                        <?php echo (is_owner()) ? 'background: #fef3c7; color: #b45309; border-color: #fde68a;' : 'background: #e0f2fe; color: #0369a1; border-color: #bae6fd;'; ?>">
                                         <?php if (!empty($current_user_foto) && file_exists(__DIR__ . '/' . $current_user_foto)): ?>
-                                            <img src="<?php echo htmlspecialchars($current_user_foto); ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                                            <img src="<?php echo htmlspecialchars($current_user_foto); ?>" alt="Preview" style="width: 100%; height: 100%; object-fit: cover;">
                                         <?php else: ?>
-                                            <?php echo strtoupper(substr($_SESSION['nama_lengkap'] ?? $_SESSION['username'] ?? 'O', 0, 1)); ?>
+                                            <?php echo strtoupper(substr($_SESSION['nama_lengkap'] ?? $_SESSION['username'] ?? 'U', 0, 1)); ?>
                                         <?php endif; ?>
                                     </div>
                                     <div style="flex: 1;">
-                                        <button type="button" class="btn-primary-sm" style="background: #ffffff; color: var(--text-dark); border: 1.5px solid var(--border); padding: 6px 12px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;" onclick="document.getElementById('input-foto-saya').click()">
-                                            <?php echo ui_icon("folder", 14); ?> <span>Ganti Foto Profil</span>
+                                        <button type="button" class="btn-primary-sm" style="background: #ffffff; color: var(--text-dark); border: 1.5px solid var(--border); padding: 7px 14px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;" onclick="document.getElementById('input-foto-profil-baru').click()">
+                                            <?php echo ui_icon("folder", 14); ?> <span>Pilih Foto Baru</span>
                                         </button>
-                                        <input type="file" id="input-foto-saya" name="foto_profil_saya" accept="image/*" style="display: none;" onchange="previewFotoSaya(this)">
-                                        <div id="nama-file-saya" style="font-size: 11px; color: var(--text-muted); margin-top: 3px;">Pilih foto dari komputer Anda</div>
+                                        <input type="file" id="input-foto-profil-baru" name="foto_profil_saya" accept="image/*" style="display: none;" onchange="previewFotoProfilSaya(this)">
+                                        <div id="nama-file-profil-saya" style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Pilih file foto dari perangkat Anda untuk memperbarui avatar</div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="form-group" style="margin-bottom: 14px;">
-                                <label class="form-label" style="font-weight: 700; margin-bottom: 4px;">Username Akun Saya</label>
-                                <input type="text" class="form-control" disabled style="background: #f1f5f9; cursor: not-allowed; font-family: monospace; font-weight: 600; height: 38px;" value="@<?php echo htmlspecialchars($_SESSION['username'] ?? 'owner'); ?>">
-                                <small style="color: var(--text-muted); font-size: 11px; display: block; margin-top: 3px;">Username akun utama Owner bersifat tetap dan permanen.</small>
-                            </div>
-
-                            <div class="form-group" style="margin-bottom: 14px;">
-                                <label class="form-label" style="font-weight: 700; margin-bottom: 4px;">Nama Lengkap Anda</label>
-                                <input type="text" name="nama_profil" class="form-control" required style="height: 38px;" value="<?php echo htmlspecialchars($_SESSION['nama_lengkap'] ?? ''); ?>">
-                            </div>
-
-                            <div class="form-group" style="margin-bottom: 14px;">
-                                <label class="form-label" style="font-weight: 700; margin-bottom: 4px;">Alamat Email Anda</label>
-                                <input type="email" name="email_profil" class="form-control" placeholder="owner@fillahfood.com" style="height: 38px;" value="<?php echo htmlspecialchars($current_user_email); ?>">
-                            </div>
-
-                            <div class="form-group" style="margin-bottom: 14px;">
-                                <label class="form-label" style="font-weight: 700; margin-bottom: 4px;">Peran & Hak Akses Akun Saya</label>
-                                <div style="padding: 4px 0;">
-                                    <span class="badge badge-role-owner"><?php echo ui_icon("crown", 12); ?> Owner (Hak Akses Penuh Sistem)</span>
+                            <!-- 2 Kolom: Nama Lengkap & Email -->
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 14px;">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label class="form-label" style="font-weight: 700; margin-bottom: 4px;">Nama Lengkap Anda</label>
+                                    <input type="text" name="nama_profil" class="form-control" required style="height: 40px;" value="<?php echo htmlspecialchars($_SESSION['nama_lengkap'] ?? ''); ?>">
                                 </div>
-                                <div style="display: flex; align-items: flex-start; gap: 6px; margin-top: 5px; color: var(--text-muted); font-size: 11px; line-height: 1.4;">
-                                    <span style="flex-shrink: 0; margin-top: 1px;"><?php echo ui_icon("shield", 13); ?></span>
-                                    <span>Wewenang tertinggi mengelola produk, stok gudang, dan hak akses staf.</span>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label class="form-label" style="font-weight: 700; margin-bottom: 4px;">Alamat Email</label>
+                                    <input type="email" name="email_profil" class="form-control" placeholder="nama@fillahfood.com" style="height: 40px;" value="<?php echo htmlspecialchars($current_user_email); ?>">
                                 </div>
                             </div>
 
-                            <div class="form-group" style="margin-bottom: 18px;">
-                                <label class="form-label" style="font-weight: 700; margin-bottom: 4px;">Ganti Kata Sandi Akun Anda</label>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                                    <input type="password" name="password_baru_profil" class="form-control" placeholder="Kata sandi baru" style="height: 38px;">
-                                    <input type="password" name="konfirmasi_password_profil" class="form-control" placeholder="Ulangi konfirmasi" style="height: 38px;">
+                            <!-- Username ID Akun (Permanen) -->
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label" style="font-weight: 700; margin-bottom: 4px;">Username (ID Akun)</label>
+                                <input type="text" class="form-control" disabled style="background: #f1f5f9; cursor: not-allowed; font-family: monospace; font-weight: 600; height: 40px;" value="@<?php echo htmlspecialchars($_SESSION['username'] ?? 'user'); ?>">
+                                <div style="display: flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 11px; color: var(--text-muted);">
+                                    <?php echo ui_icon("lock", 11); ?>
+                                    <span>Username bersifat tetap sebagai identitas otentikasi dan riwayat transaksi kasir.</span>
                                 </div>
-                                <small style="color: var(--text-muted); font-size: 11px; display: block; margin-top: 3px;">Kosongkan jika Anda tidak ingin mengubah kata sandi saat ini.</small>
                             </div>
                         </div>
 
-                        <div style="margin-top: auto; padding-top: 14px;">
-                            <button type="submit" name="simpan_profil_saya" class="btn-primary-sm" style="width: 100%; height: 44px; justify-content: center; font-size: 13px; font-weight: 700; background: #0284c7; display: inline-flex; align-items: center; gap: 8px;">
-                                <?php echo ui_icon("save", 16); ?> <span>Perbarui Profil & Sandi Saya</span>
+                        <!-- Divider Line Symmetrical -->
+                        <div style="border-top: 1.5px solid var(--border); margin: 22px 0;"></div>
+
+                        <!-- Section 2: Keamanan & Ganti Kata Sandi -->
+                        <div style="margin-bottom: 22px;">
+                            <h3 style="font-size: 13px; font-weight: 800; color: var(--text-dark); margin-bottom: 14px; display: flex; align-items: center; gap: 6px;">
+                                <?php echo ui_icon("lock", 15); ?> <span>Keamanan & Ganti Kata Sandi</span>
+                            </h3>
+
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label class="form-label" style="font-weight: 700; margin-bottom: 4px;">Kata Sandi Baru</label>
+                                    <input type="password" name="password_baru_profil" class="form-control" placeholder="Ketik sandi baru jika ingin diubah" style="height: 40px;">
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label class="form-label" style="font-weight: 700; margin-bottom: 4px;">Konfirmasi Kata Sandi Baru</label>
+                                    <input type="password" name="konfirmasi_password_profil" class="form-control" placeholder="Ulangi kata sandi baru untuk konfirmasi" style="height: 40px;">
+                                </div>
+                            </div>
+                            <small style="color: var(--text-muted); font-size: 11.5px; display: block; margin-top: 6px;">
+                                Biarkan kedua kolom kata sandi di atas kosong jika Anda tidak berencana mengganti kata sandi akun saat ini.
+                            </small>
+                        </div>
+
+                        <!-- Section 3: Submit Button Bar -->
+                        <div style="border-top: 1.5px solid var(--border); padding-top: 20px; display: flex; justify-content: flex-end;">
+                            <button type="submit" name="simpan_profil_saya" class="btn-primary-sm" style="height: 44px; padding: 0 28px; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">
+                                <?php echo ui_icon("save", 16); ?> <span>Simpan & Perbarui Profil Saya</span>
                             </button>
                         </div>
+
                     </form>
                 </div>
 
             </div>
         </div>
-        <?php endif; ?>
 
         </div>
     </div>
@@ -4070,9 +4048,12 @@ if (is_owner()) {
 
             // Jika membuka child Pengaturan, pastikan grup Pengaturan berstatus open
             var groupPengaturan = document.getElementById('nav-group-pengaturan');
+            if (tabName === 'user-setting') {
+                tabName = 'profil';
+            }
             if (groupPengaturan) {
                 var parentItem = groupPengaturan.querySelector('.nav-parent');
-                if (tabName === 'pengguna' || tabName === 'peran' || tabName === 'user-setting') {
+                if (tabName === 'pengguna' || tabName === 'peran' || tabName === 'profil') {
                     groupPengaturan.classList.add('open');
                     if (parentItem) parentItem.classList.add('active');
                 } else {
@@ -4109,9 +4090,9 @@ if (is_owner()) {
                 } else if (tabName === 'peran') {
                     titleEl.textContent = 'Peran & Hak Akses (RBAC)';
                     subtitleEl.textContent = 'Konfigurasi pembagian hak akses fitur dan penetapan peran staf (Owner, Admin, Kasir)';
-                } else if (tabName === 'user-setting') {
-                    titleEl.textContent = 'User Setting & Profil Akun';
-                    subtitleEl.textContent = 'Pengaturan kredensial akun staf dan profil pribadi';
+                } else if (tabName === 'profil' || tabName === 'user-setting') {
+                    titleEl.textContent = 'Profil Saya';
+                    subtitleEl.textContent = 'Kelola identitas akun, foto profil, dan kata sandi keamanan Anda';
                 }
             }
 
@@ -4148,6 +4129,42 @@ if (is_owner()) {
             }
         });
         /* ---- Preview Gambar Upload ---- */
+                function previewFotoProfilSaya(input) {
+            if (input.files && input.files[0]) {
+                var file = input.files[0];
+                if (!file.type.startsWith('image/')) {
+                    alert('File harus berupa gambar (JPG, PNG, WebP).');
+                    input.value = '';
+                    return;
+                }
+                if (file.size > 2 * 1024 * 1024) {
+                    alert('Ukuran foto profil maksimal 2 MB.');
+                    input.value = '';
+                    return;
+                }
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    var elLeft = document.getElementById('profil-avatar-display');
+                    var elForm = document.getElementById('profil-form-avatar-preview');
+                    var nameEl = document.getElementById('nama-file-profil-saya');
+                    if (elLeft) {
+                        elLeft.style.background = 'transparent';
+                        elLeft.innerHTML = '<img src="' + e.target.result + '" style="width:100%; height:100%; object-fit:cover;">';
+                    }
+                    if (elForm) {
+                        elForm.style.background = 'transparent';
+                        elForm.innerHTML = '<img src="' + e.target.result + '" style="width:100%; height:100%; object-fit:cover;">';
+                    }
+                    if (nameEl) {
+                        nameEl.textContent = file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+                        nameEl.style.color = 'var(--primary)';
+                        nameEl.style.fontWeight = '700';
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
         function previewGambar(input, previewId) {
             const previewEl = document.getElementById(previewId);
             if (!input.files || !input.files[0]) return;
