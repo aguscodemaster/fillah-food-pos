@@ -284,6 +284,44 @@ if (isset($_POST['login'])) {
             text-decoration: underline;
         }
 
+        .role-tag {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 2px 7px;
+            border-radius: 4px;
+            letter-spacing: 0.4px;
+            display: inline-block;
+        }
+
+        .role-owner {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+
+        .role-admin {
+            background: #e0f2fe;
+            color: #0369a1;
+            border: 1px solid #bae6fd;
+        }
+
+        .role-kasir {
+            background: #dcfce7;
+            color: #15803d;
+            border: 1px solid #bbf7d0;
+        }
+
+        .demo-pass {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #475569;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
         /* Media queries for very small screens */
         @media (max-width: 360px) {
             .login-card {
@@ -300,7 +338,13 @@ if (isset($_POST['login'])) {
 
     <div class="login-card">
         <div class="brand-header">
-            <div class="brand-icon">🍗</div>
+            <div class="brand-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"></path>
+                    <path d="M7 2v20"></path>
+                    <path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"></path>
+                </svg>
+            </div>
             <h1 class="brand-title">Fillah Food POS</h1>
             <p class="brand-subtitle">Sistem Informasi Persediaan & Kasir Terintegrasi</p>
             <span class="badge-academic">STSI4440 Capstone Project UT - Kelompok 3C</span>
@@ -308,7 +352,11 @@ if (isset($_POST['login'])) {
 
         <?php if (!empty($error)): ?>
             <div class="error-alert">
-                <span>⚠️</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
                 <span><?php echo htmlspecialchars($error); ?></span>
             </div>
         <?php endif; ?>
@@ -343,30 +391,57 @@ if (isset($_POST['login'])) {
             </div>
 
             <button type="submit" name="login" class="btn-submit">
-                Masuk ke Sistem ➜
+                <span>Masuk ke Sistem</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
             </button>
         </form>
 
         <!-- Akun Demo Bawaan untuk Penilaian Dosen/Penguji (3 Peran) -->
         <div class="demo-box">
-            <div style="font-weight: 700; margin-bottom: 4px;">🔑 Pilihan Akun Demo (Klik untuk Autofill):</div>
+            <div style="font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; color: var(--text-dark);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="7.5" cy="15.5" r="5.5"></circle>
+                    <path d="m21 2-9.6 9.6"></path>
+                    <path d="m15.5 7.5 3 3"></path>
+                </svg>
+                <span>Pilihan Akun Demo (Klik untuk Autofill):</span>
+            </div>
             <div class="demo-row" onclick="fillLogin('owner_nihayatus', '12345')">
-                <span>👑 <strong>Owner:</strong> owner_nihayatus (Ibu Sofiyah)</span>
-                <span>Pass: 12345</span>
+                <span style="display:flex; align-items:center; gap:6px;">
+                    <span class="role-tag role-owner">Owner</span>
+                    <strong>owner_nihayatus</strong> (Ibu Sofiyah)
+                </span>
+                <span class="demo-pass">Pass: 12345</span>
             </div>
             <div class="demo-row" onclick="fillLogin('admin_persediaan', '12345')">
-                <span>⚙️ <strong>Admin:</strong> admin_persediaan (Gudang)</span>
-                <span>Pass: 12345</span>
+                <span style="display:flex; align-items:center; gap:6px;">
+                    <span class="role-tag role-admin">Admin</span>
+                    <strong>admin_persediaan</strong> (Gudang)
+                </span>
+                <span class="demo-pass">Pass: 12345</span>
             </div>
             <div class="demo-row" onclick="fillLogin('kasir_1', '12345')">
-                <span>🛒 <strong>Kasir:</strong> kasir_1 / aisyah (Aisyah)</span>
-                <span>Pass: 12345</span>
+                <span style="display:flex; align-items:center; gap:6px;">
+                    <span class="role-tag role-kasir">Kasir</span>
+                    <strong>kasir_1</strong> / <strong>aisyah</strong>
+                </span>
+                <span class="demo-pass">Pass: 12345</span>
             </div>
         </div>
 
         <div class="public-menu-link">
             <span>Pelanggan ingin melihat menu? </span>
-            <a href="menu.php" target="_blank">Buka E-Menu Publik 📱</a>
+            <a href="menu.php" target="_blank" style="display: inline-flex; align-items: center; gap: 4px;">
+                <span>Buka E-Menu Publik</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                    <polyline points="15 3 21 3 21 9"></polyline>
+                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+            </a>
         </div>
     </div>
 

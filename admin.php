@@ -27,6 +27,13 @@ if ((!isset($_SESSION['id_user']) || $_SESSION['id_user'] == 3 || !isset($_SESSI
     }
 }
 
+
+// Helper rendering ikon SVG modern (tanpa emoji kasar)
+function ui_icon($name, $size = 16, $class = '', $style = '') {
+    $style_attr = 'width:' . $size . 'px; height:' . $size . 'px; vertical-align: middle; flex-shrink: 0;' . $style;
+    $class_attr = $class ? ' class="' . $class . '"' : '';
+    return '<svg' . $class_attr . ' style="' . $style_attr . '"><use href="#icon-' . $name . '"></use></svg>';
+}
 $pesan_sukses = "";
 $pesan_error = "";
 
@@ -1616,6 +1623,133 @@ if (is_owner()) {
     </style>
 </head>
 <body>
+    <!-- SVG Sprite Ikon Modern (Lucide/Feather Style) -->
+    <svg style="display: none;" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <symbol id="icon-utensils" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"></path>
+          <path d="M7 2v20"></path>
+          <path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"></path>
+        </symbol>
+        <symbol id="icon-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="7" height="9" x="3" y="3" rx="1"></rect>
+          <rect width="7" height="5" x="14" y="3" rx="1"></rect>
+          <rect width="7" height="9" x="14" y="12" rx="1"></rect>
+          <rect width="7" height="5" x="3" y="16" rx="1"></rect>
+        </symbol>
+        <symbol id="icon-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path>
+          <path d="M6 6h10"></path>
+          <path d="M6 10h10"></path>
+        </symbol>
+        <symbol id="icon-box" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path>
+          <path d="m3.3 7 8.7 5 8.7-5"></path>
+          <path d="M12 22V12"></path>
+        </symbol>
+        <symbol id="icon-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </symbol>
+        <symbol id="icon-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </symbol>
+        <symbol id="icon-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </symbol>
+        <symbol id="icon-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+        </symbol>
+        <symbol id="icon-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="14" height="20" x="5" y="2" rx="2" ry="2"></rect>
+          <path d="M12 18h.01"></path>
+        </symbol>
+        <symbol id="icon-cart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="8" cy="21" r="1"></circle>
+          <circle cx="19" cy="21" r="1"></circle>
+          <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path>
+        </symbol>
+        <symbol id="icon-receipt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"></path>
+          <line x1="8" y1="8" x2="16" y2="8"></line>
+          <line x1="8" y1="12" x2="16" y2="12"></line>
+          <line x1="8" y1="16" x2="12" y2="16"></line>
+        </symbol>
+        <symbol id="icon-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </symbol>
+        <symbol id="icon-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
+        </symbol>
+        <symbol id="icon-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 6h18"></path>
+          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+        </symbol>
+        <symbol id="icon-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </symbol>
+        <symbol id="icon-inbound" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 3v12"></path>
+          <path d="m8 11 4 4 4-4"></path>
+          <path d="M8 5H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-4"></path>
+        </symbol>
+        <symbol id="icon-outbound" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 15V3"></path>
+          <path d="m8 7 4-4 4 4"></path>
+          <path d="M8 5H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-4"></path>
+        </symbol>
+        <symbol id="icon-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </symbol>
+        <symbol id="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </symbol>
+        <symbol id="icon-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </symbol>
+        <symbol id="icon-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path>
+          <circle cx="12" cy="13" r="3"></circle>
+        </symbol>
+        <symbol id="icon-save" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+          <polyline points="17 21 17 13 7 13 7 21"></polyline>
+          <polyline points="7 3 7 8 15 8"></polyline>
+        </symbol>
+        <symbol id="icon-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"></path>
+        </symbol>
+        <symbol id="icon-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path>
+        </symbol>
+        <symbol id="icon-zap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+        </symbol>
+        <symbol id="icon-crown" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.769a1 1 0 0 1-.969.712H5.822a1 1 0 0 1-.97-.712L2.02 6.019a.5.5 0 0 1 .797-.52l4.277 3.665a1 1 0 0 0 1.516-.294z"></path>
+          <path d="M5 21h14"></path>
+        </symbol>
+        <symbol id="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </symbol>
+        <symbol id="icon-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="4" y1="12" x2="20" y2="12"></line>
+          <line x1="4" y1="6" x2="20" y2="6"></line>
+          <line x1="4" y1="18" x2="20" y2="18"></line>
+        </symbol>
+      </defs>
+    </svg>
     <!-- Overlay Backdrop untuk Mobile Sidebar Drawer -->
     <div class="sidebar-overlay" onclick="closeSidebar()"></div>
 
@@ -1624,55 +1758,55 @@ if (is_owner()) {
         <div>
             <div class="brand-section">
                 <div class="brand-brand-wrap">
-                    <div class="brand-icon">🍗</div>
+                    <div class="brand-icon"><?php echo ui_icon("utensils", 22); ?></div>
                     <div class="brand-details">
                         <h2>Fillah Food</h2>
                         <p>Dashboard Manajemen</p>
                     </div>
                 </div>
-                <button type="button" class="btn-close-sidebar" onclick="closeSidebar()" title="Tutup Menu">✕</button>
+                <button type="button" class="btn-close-sidebar" onclick="closeSidebar()" title="Tutup Menu"><?php echo ui_icon("close", 16); ?></button>
             </div>
 
             <nav class="nav-menu">
                 <a href="admin.php?tab=dashboard" data-tab="dashboard" class="nav-item <?php echo ($tab_aktif === 'dashboard') ? 'active' : ''; ?>" onclick="pindahTab('dashboard', event)">
-                    <span>📊</span> Dashboard
+                    <span><?php echo ui_icon("dashboard", 18); ?></span> Dashboard
                 </a>
                 <a href="admin.php?tab=produk" data-tab="produk" class="nav-item <?php echo ($tab_aktif === 'produk') ? 'active' : ''; ?>" onclick="pindahTab('produk', event)">
-                    <span>🍔</span> Menu Produk
+                    <span><?php echo ui_icon("book", 18); ?></span> Menu Produk
                 </a>
                 <a href="admin.php?tab=stok" data-tab="stok" class="nav-item <?php echo ($tab_aktif === 'stok') ? 'active' : ''; ?>" onclick="pindahTab('stok', event)">
-                    <span>📦</span> Stok Bahan Baku
+                    <span><?php echo ui_icon("box", 18); ?></span> Stok Bahan Baku
                 </a>
                 <?php if (is_owner()): ?>
                 <div class="nav-group <?php echo in_array($tab_aktif, ['pengguna', 'peran', 'user-setting']) ? 'open' : ''; ?>" id="nav-group-pengaturan">
                     <div class="nav-item nav-parent <?php echo in_array($tab_aktif, ['pengguna', 'peran', 'user-setting']) ? 'active' : ''; ?>" onclick="toggleSubmenu('nav-group-pengaturan')">
                         <div class="nav-parent-title">
-                            <span>⚙️</span> Pengaturan
+                            <span><?php echo ui_icon("settings", 18); ?></span> Pengaturan
                         </div>
                         <span class="nav-arrow">▼</span>
                     </div>
                     <div class="nav-submenu">
                         <a href="admin.php?tab=pengguna" data-tab="pengguna" class="nav-subitem <?php echo ($tab_aktif === 'pengguna') ? 'active' : ''; ?>" onclick="pindahTab('pengguna', event)">
-                            <span>👥</span> Pengelolaan Pengguna
+                            <span><?php echo ui_icon("users", 16); ?></span> Pengelolaan Pengguna
                         </a>
                         <a href="admin.php?tab=peran" data-tab="peran" class="nav-subitem <?php echo ($tab_aktif === 'peran') ? 'active' : ''; ?>" onclick="pindahTab('peran', event)">
-                            <span>🛡️</span> Peran
+                            <span><?php echo ui_icon("shield", 16); ?></span> Peran
                         </a>
                         <a href="admin.php?tab=user-setting" data-tab="user-setting" class="nav-subitem <?php echo ($tab_aktif === 'user-setting') ? 'active' : ''; ?>" onclick="pindahTab('user-setting', event)">
-                            <span>👤</span> User Setting
+                            <span><?php echo ui_icon("user", 16); ?></span> User Setting
                         </a>
                     </div>
                 </div>
                 <?php endif; ?>
                 <a href="menu.php" target="_blank" class="nav-item">
-                    <span>📱</span> E-Menu Pelanggan
+                    <span><?php echo ui_icon("phone", 18); ?></span> E-Menu Pelanggan
                 </a>
             </nav>
         </div>
 
         <div class="sidebar-footer">
             <a href="kasir.php" class="btn-switch-mode">
-                🛒 Buka Layar Kasir POS
+                <?php echo ui_icon("cart", 16); ?> Buka Layar Kasir POS
             </a>
             <a href="logout.php" class="btn-logout">
                 Keluar (Logout)
@@ -1685,7 +1819,7 @@ if (is_owner()) {
         <!-- Topbar -->
         <header class="topbar">
             <div class="topbar-left">
-                <button type="button" class="btn-hamburger" onclick="toggleSidebar()" aria-label="Buka Menu">☰</button>
+                <button type="button" class="btn-hamburger" onclick="toggleSidebar()" aria-label="Buka Menu"><?php echo ui_icon("menu", 20); ?></button>
                 <div class="topbar-title">
                     <h1 id="topbar-page-title">
                         <?php 
@@ -1727,9 +1861,9 @@ if (is_owner()) {
                     </div>
                     <div style="font-size: 11px; margin-top: 2px;">
                         <?php if (is_owner()): ?>
-                            <span class="badge badge-role-owner" style="font-size: 10px; padding: 2px 8px;">👑 Owner (Pemilik Usaha)</span>
+                            <span class="badge badge-role-owner" style="font-size: 10px; padding: 2px 8px;"><?php echo ui_icon("crown", 12); ?> Owner (Pemilik Usaha)</span>
                         <?php else: ?>
-                            <span class="badge badge-role-admin" style="font-size: 10px; padding: 2px 8px;">⚙️ Admin (Staf Persediaan)</span>
+                            <span class="badge badge-role-admin" style="font-size: 10px; padding: 2px 8px;"><?php echo ui_icon("settings", 12); ?> Admin (Staf Persediaan)</span>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -1740,11 +1874,11 @@ if (is_owner()) {
         <div class="content-body">
 
             <?php if (!empty($pesan_sukses)): ?>
-                <div class="alert-box alert-success">✅ <?php echo htmlspecialchars($pesan_sukses); ?></div>
+                <div class="alert-box alert-success"><?php echo ui_icon("check", 16); ?> <?php echo htmlspecialchars($pesan_sukses); ?></div>
             <?php endif; ?>
 
             <?php if (!empty($pesan_error)): ?>
-                <div class="alert-box alert-danger">⚠️ <?php echo htmlspecialchars($pesan_error); ?></div>
+                <div class="alert-box alert-danger"><?php echo ui_icon("alert", 16); ?> <?php echo htmlspecialchars($pesan_error); ?></div>
             <?php endif; ?>
 
             <!-- TAB VIEW 1: DASHBOARD (Ringkasan Omzet, Stok Bahan & Transaksi) -->
@@ -1774,7 +1908,7 @@ if (is_owner()) {
                         <?php echo $kpi_alert['total_menipis']; ?> Bahan
                     </div>
                     <div class="kpi-desc">
-                        <?php echo ($kpi_alert['total_menipis'] > 0) ? '⚠️ Segera lakukan belanja bahan ke pasar!' : 'Semua persediaan bahan baku aman.'; ?>
+                        <?php echo ($kpi_alert['total_menipis'] > 0) ? 'Segera lakukan belanja bahan ke pasar!' : 'Semua persediaan bahan baku aman.'; ?>
                     </div>
                 </div>
             </div>
@@ -1787,8 +1921,8 @@ if (is_owner()) {
                     <?php if (!empty($bahan_kritis_list)): ?>
                         <div class="panel-card" style="border-left: 4px solid var(--accent); margin-bottom: 20px;">
                             <div class="panel-header">
-                                <h2><span>⚠️</span> Peringatan Persediaan Menipis</h2>
-                                <button class="btn-primary-sm" onclick="pindahTab('stok', event)">Buka Stok Bahan ➔</button>
+                                <h2><span><?php echo ui_icon("alert", 20); ?></span> Peringatan Persediaan Menipis</h2>
+                                <button class="btn-primary-sm" onclick="pindahTab('stok', event)">Buka Stok Bahan &rarr;</button>
                             </div>
                             <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 12px;">Bahan baku berikut telah mencapai atau di bawah batas aman minimum. Segera belanja pasokan.</p>
                             <div class="table-responsive">
@@ -1831,11 +1965,11 @@ if (is_owner()) {
                     <?php else: ?>
                         <div class="panel-card" style="border-left: 4px solid #16a34a; margin-bottom: 20px;">
                             <div class="panel-header">
-                                <h2><span>📦</span> Status Persediaan Dapur</h2>
-                                <button class="btn-primary-sm" onclick="pindahTab('stok', event)">Kelola Bahan Baku ➔</button>
+                                <h2><span><?php echo ui_icon("box", 20); ?></span> Status Persediaan Dapur</h2>
+                                <button class="btn-primary-sm" onclick="pindahTab('stok', event)">Kelola Bahan Baku &rarr;</button>
                             </div>
                             <div style="padding: 16px; background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0; display: flex; align-items: center; gap: 12px;">
-                                <span style="font-size: 28px;">✅</span>
+                                <span style="display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:50%; background:#dcfce7; color:#16a34a;"><?php echo ui_icon("check", 22); ?></span>
                                 <div>
                                     <strong style="color: #15803d; font-size: 14px;">Semua Bahan Baku Aman</strong>
                                     <p style="font-size: 12.5px; color: #166534; margin: 2px 0 0 0;">Total <?php echo count($bahan_baku_list); ?> jenis bahan baku tersedia di atas ambang batas minimum.</p>
@@ -1847,20 +1981,20 @@ if (is_owner()) {
                     <!-- Pintasan Cepat Sistem -->
                     <div class="panel-card">
                         <div class="panel-header">
-                            <h2><span>⚡</span> Pintasan Cepat</h2>
+                            <h2><span><?php echo ui_icon("zap", 20); ?></span> Pintasan Cepat</h2>
                         </div>
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px;">
                             <button type="button" onclick="pindahTab('produk', event)" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:14px; text-align:center; cursor:pointer; font-weight:700; font-size:12px; display:flex; flex-direction:column; align-items:center; gap:6px;">
-                                <span style="font-size:22px;">🍔</span> Kelola Menu & Resep
+                                <span><?php echo ui_icon("book", 22); ?></span> Kelola Menu & Resep
                             </button>
                             <button type="button" onclick="bukaModalStokMasuk()" style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:14px; text-align:center; cursor:pointer; font-weight:700; font-size:12px; color:#15803d; display:flex; flex-direction:column; align-items:center; gap:6px;">
-                                <span style="font-size:22px;">📥</span> Catat Stok Masuk
+                                <span><?php echo ui_icon("inbound", 22); ?></span> Catat Stok Masuk
                             </button>
                             <a href="kasir.php" style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:10px; padding:14px; text-align:center; text-decoration:none; font-weight:700; font-size:12px; color:#0369a1; display:flex; flex-direction:column; align-items:center; gap:6px;">
-                                <span style="font-size:22px;">🛒</span> Layar Kasir POS
+                                <span><?php echo ui_icon("cart", 22); ?></span> Layar Kasir POS
                             </a>
                             <a href="menu.php" target="_blank" style="background:#fdf4ff; border:1px solid #f0abfc; border-radius:10px; padding:14px; text-align:center; text-decoration:none; font-weight:700; font-size:12px; color:#a21caf; display:flex; flex-direction:column; align-items:center; gap:6px;">
-                                <span style="font-size:22px;">📱</span> E-Menu Pelanggan
+                                <span><?php echo ui_icon("phone", 22); ?></span> E-Menu Pelanggan
                             </a>
                         </div>
                     </div>
@@ -1869,7 +2003,7 @@ if (is_owner()) {
                 <!-- Kolom Kanan: Riwayat Transaksi Kasir -->
                 <div class="panel-card" id="riwayat-transaksi">
                     <div class="panel-header">
-                        <h2><span>🧾</span> Transaksi Kasir Terakhir</h2>
+                        <h2><span><?php echo ui_icon("receipt", 20); ?></span> Transaksi Kasir Terakhir</h2>
                         <span style="font-size: 11px; color: var(--text-muted);">10 Transaksi Terakhir</span>
                     </div>
 
@@ -1917,7 +2051,7 @@ if (is_owner()) {
             <div class="panel-card">
                 <div class="panel-header">
                     <div>
-                        <h2><span>🍔</span> Katalog Menu Makanan & Minuman</h2>
+                        <h2><span><?php echo ui_icon("book", 20); ?></span> Katalog Menu Makanan & Minuman</h2>
                         <span style="font-size: 12px; color: var(--text-muted);">Kelola harga jual, foto produk, dan formula resep bahan baku</span>
                     </div>
                     <button class="btn-primary-sm" onclick="bukaModalProdukBaru()">+ Tambah Menu Baru</button>
@@ -1926,11 +2060,11 @@ if (is_owner()) {
                 <div class="filter-bar">
                     <div class="filter-pills">
                         <button type="button" class="filter-pill active" onclick="filterKategoriProduk('all', this)">Semua (<?php echo count($produk_list); ?>)</button>
-                        <button type="button" class="filter-pill" onclick="filterKategoriProduk('Makanan', this)">🍗 Makanan</button>
-                        <button type="button" class="filter-pill" onclick="filterKategoriProduk('Minuman', this)">🥤 Minuman</button>
+                        <button type="button" class="filter-pill" onclick="filterKategoriProduk('Makanan', this)">Makanan</button>
+                        <button type="button" class="filter-pill" onclick="filterKategoriProduk('Minuman', this)">Minuman</button>
                     </div>
                     <div class="search-input-wrap">
-                        <span class="search-icon">🔍</span>
+                        <span class="search-icon"><?php echo ui_icon("search", 16); ?></span>
                         <input type="text" id="cari-menu-produk" placeholder="Cari nama menu..." onkeyup="filterMenuProduk()">
                     </div>
                 </div>
@@ -1962,7 +2096,7 @@ if (is_owner()) {
                                                 <?php if (!empty($p['gambar']) && file_exists(__DIR__ . '/' . $p['gambar'])): ?>
                                                     <img src="<?php echo htmlspecialchars($p['gambar']); ?>" alt="<?php echo htmlspecialchars($p['nama_produk']); ?>">
                                                 <?php else: ?>
-                                                    <span><?php echo ($p['kategori'] === 'Minuman') ? '🥤' : '🍗'; ?></span>
+                                                    <span><?php echo ($p['kategori'] === 'Minuman') ? ui_icon("utensils", 24) : ui_icon("utensils", 24); ?></span>
                                                 <?php endif; ?>
                                             </div>
                                         </td>
@@ -1991,20 +2125,20 @@ if (is_owner()) {
                                                     <?php endforeach; ?>
                                                 </div>
                                             <?php else: ?>
-                                                <span style="font-size: 11.5px; color: #94a3b8; font-style: italic;">⚠️ Belum diatur resep</span>
+                                                <span style="font-size: 11.5px; color: #94a3b8; font-style: italic; display:inline-flex; align-items:center; gap:4px;"><?php echo ui_icon("alert", 13); ?> Belum diatur resep</span>
                                             <?php endif; ?>
                                         </td>
                                         <td style="text-align: right; white-space: nowrap;">
                                             <button type="button" class="btn-table-action btn-resep" onclick="bukaModalAturResep(<?php echo $p['id']; ?>, '<?php echo addslashes($p['nama_produk']); ?>')">
-                                                ⚙️ Atur Resep
+                                                <?php echo ui_icon("settings", 13); ?> Atur Resep
                                             </button>
                                             <button type="button" class="btn-table-action" onclick="bukaModalEditProduk(<?php echo htmlspecialchars(json_encode($p)); ?>)">
-                                                ✏️ Edit
+                                                <?php echo ui_icon("edit", 13); ?> Edit
                                             </button>
                                             <form method="POST" action="" style="display: inline;" onsubmit="return confirm('Apakah Anda yakin ingin menghapus menu \'<?php echo addslashes($p['nama_produk']); ?>\'?');">
                                                 <input type="hidden" name="id_produk" value="<?php echo $p['id']; ?>">
                                                 <button type="submit" name="hapus_produk" class="btn-table-action btn-danger-sm" title="Hapus Menu">
-                                                    🗑️
+                                                    
                                                 </button>
                                             </form>
                                         </td>
@@ -2022,12 +2156,12 @@ if (is_owner()) {
             <div class="panel-card">
                 <div class="panel-header">
                     <div>
-                        <h2><span>📦</span> Persediaan Bahan Baku (Gudang & Dapur)</h2>
+                        <h2><span><?php echo ui_icon("box", 20); ?></span> Persediaan Bahan Baku (Gudang & Dapur)</h2>
                         <span style="font-size: 12px; color: var(--text-muted);">Pantau saldo fisik bahan, catat kulakan masuk, dan bahan rusak/basi</span>
                     </div>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <button class="btn-primary-sm" style="background: #16a34a;" onclick="bukaModalStokMasuk()">📥 + Stok Masuk</button>
-                        <button class="btn-primary-sm" style="background: #dc2626;" onclick="bukaModalStokKeluar()">📤 - Catat Rusak / Basi</button>
+                        <button class="btn-primary-sm" style="background: #16a34a; display:inline-flex; align-items:center; gap:6px;" onclick="bukaModalStokMasuk()"><?php echo ui_icon("inbound", 15); ?> <span>+ Stok Masuk</span></button>
+                        <button class="btn-primary-sm" style="background: #dc2626; display:inline-flex; align-items:center; gap:6px;" onclick="bukaModalStokKeluar()"><?php echo ui_icon("outbound", 15); ?> <span>- Catat Rusak / Basi</span></button>
                         <button class="btn-primary-sm" style="background: #475569;" onclick="bukaModalBahanBaru()">+ Bahan Baru</button>
                     </div>
                 </div>
@@ -2037,7 +2171,7 @@ if (is_owner()) {
                         Menampilkan <strong><?php echo count($bahan_baku_list); ?></strong> jenis bahan baku terdaftar
                     </div>
                     <div class="search-input-wrap">
-                        <span class="search-icon">🔍</span>
+                        <span class="search-icon"><?php echo ui_icon("search", 16); ?></span>
                         <input type="text" id="cari-bahan-baku" placeholder="Cari bahan baku..." onkeyup="filterBahanBaku()">
                     </div>
                 </div>
@@ -2076,7 +2210,7 @@ if (is_owner()) {
                                             <?php if (!empty($b['gambar']) && file_exists(__DIR__ . '/' . $b['gambar'])): ?>
                                                 <img src="<?php echo htmlspecialchars($b['gambar']); ?>" alt="<?php echo htmlspecialchars($b['nama_bahan']); ?>">
                                             <?php else: ?>
-                                                <span>📦</span>
+                                                <span><?php echo ui_icon("box", 24); ?></span>
                                             <?php endif; ?>
                                         </div>
                                     </td>
@@ -2104,12 +2238,12 @@ if (is_owner()) {
                                             - Rusak
                                         </button>
                                         <button type="button" class="btn-table-action" onclick="bukaModalEditBahan(<?php echo htmlspecialchars(json_encode($b)); ?>)">
-                                            ✏️ Edit
+                                            <?php echo ui_icon("edit", 13); ?> Edit
                                         </button>
                                         <form method="POST" action="" style="display: inline;" onsubmit="return confirm('Hapus bahan baku \'<?php echo addslashes($b['nama_bahan']); ?>\'? Formula resep yang menggunakannya juga akan terhapus.');">
                                             <input type="hidden" name="id_bahan" value="<?php echo $b['id']; ?>">
                                             <button type="submit" name="hapus_bahan" class="btn-table-action btn-danger-sm" title="Hapus Bahan">
-                                                🗑️
+                                                
                                             </button>
                                         </form>
                                     </td>
@@ -2124,7 +2258,7 @@ if (is_owner()) {
             <div class="panel-card" style="margin-top: 24px;">
                 <div class="panel-header">
                     <div>
-                        <h2><span>📑</span> Riwayat Mutasi Stok Masuk & Keluar</h2>
+                        <h2><span><?php echo ui_icon("box", 20); ?></span> Riwayat Mutasi Stok Masuk & Keluar</h2>
                         <span style="font-size: 12px; color: var(--text-muted);">20 log aktivitas kulakan belanja dan pengeluaran bahan terbaru</span>
                     </div>
                 </div>
@@ -2159,11 +2293,11 @@ if (is_owner()) {
                                         </td>
                                         <td>
                                             <?php if ($rw['tipe'] === 'masuk'): ?>
-                                                <span class="badge" style="background:#dcfce7; color:#15803d; border:1px solid #bbf7d0;">📥 Stok Masuk</span>
+                                                <span class="badge" style="background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; display:inline-flex; align-items:center; gap:4px;"><?php echo ui_icon("inbound", 12); ?> Stok Masuk</span>
                                             <?php elseif ($rw['tipe'] === 'keluar_rusak'): ?>
-                                                <span class="badge" style="background:#fee2e2; color:#b91c1c; border:1px solid #fecaca;">📤 Rusak / Basi</span>
+                                                <span class="badge" style="background:#fee2e2; color:#b91c1c; border:1px solid #fecaca; display:inline-flex; align-items:center; gap:4px;"><?php echo ui_icon("outbound", 12); ?> Rusak / Basi</span>
                                             <?php else: ?>
-                                                <span class="badge" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd;">🛒 Terjual Kasir</span>
+                                                <span class="badge" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; display:inline-flex; align-items:center; gap:4px;"><?php echo ui_icon("cart", 12); ?> Terjual Kasir</span>
                                             <?php endif; ?>
                                         </td>
                                         <td>
@@ -2199,13 +2333,13 @@ if (is_owner()) {
             <div class="panel-card" id="kelola-pengguna">
                 <div class="panel-header">
                     <div>
-                        <h2><span>👥</span> Kelola Pengguna & Hak Akses</h2>
+                        <h2><span><?php echo ui_icon("users", 20); ?></span> Kelola Pengguna & Hak Akses</h2>
                         <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
                             Pengaturan akun pengguna, kata sandi, dan pembagian hak akses (Owner, Admin, Kasir).
                         </p>
                     </div>
                     <button class="btn-primary-sm" style="background: linear-gradient(135deg, var(--primary), var(--secondary)); display: flex; align-items: center; gap: 6px;" onclick="bukaModalPenggunaBaru()">
-                        <span>➕</span> Tambah Pengguna Baru
+                        <span><?php echo ui_icon("plus", 14); ?></span> Tambah Pengguna Baru
                     </button>
                 </div>
 
@@ -2253,15 +2387,15 @@ if (is_owner()) {
                                     </td>
                                     <td>
                                         <?php if ($u['role'] === 'Owner'): ?>
-                                            <span class="badge badge-role-owner">👑 Owner</span>
+                                            <span class="badge badge-role-owner"><?php echo ui_icon("crown", 12); ?> Owner</span>
                                         <?php elseif ($u['role'] === 'Admin'): ?>
-                                            <span class="badge badge-role-admin">⚙️ Admin</span>
+                                            <span class="badge badge-role-admin"><?php echo ui_icon("settings", 12); ?> Admin</span>
                                         <?php elseif ($u['role'] === 'User'): ?>
-                                            <span class="badge badge-role-user">👤 User</span>
+                                            <span class="badge badge-role-user"><?php echo ui_icon("user", 12); ?> User</span>
                                         <?php elseif ($u['role'] === 'Kasir'): ?>
-                                            <span class="badge badge-role-kasir">🛒 Kasir</span>
+                                            <span class="badge badge-role-kasir"><?php echo ui_icon("cart", 12); ?> Kasir</span>
                                         <?php else: ?>
-                                            <span class="badge badge-role-custom">🛡️ <?php echo htmlspecialchars($u['role']); ?></span>
+                                            <span class="badge badge-role-custom"><?php echo ui_icon("shield", 12); ?> <?php echo htmlspecialchars($u['role']); ?></span>
                                         <?php endif; ?>
                                     </td>
                                     <td style="font-size: 12px; color: var(--text-muted);">
@@ -2276,22 +2410,22 @@ if (is_owner()) {
                                         <div style="display: flex; gap: 6px;">
                                             <button type="button" style="background: #f1f5f9; border: 1px solid var(--border); padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 11.5px; font-weight: 700; color: var(--text-dark);"
                                                 onclick="bukaModalEditPengguna(<?php echo $u['id']; ?>, '<?php echo addslashes($u['nama_lengkap']); ?>', '<?php echo addslashes($u['username']); ?>', '<?php echo addslashes($u['email']); ?>', '<?php echo $u['role']; ?>')">
-                                                ✏️ Edit
+                                                <?php echo ui_icon("edit", 13); ?> Edit
                                             </button>
                                             <button type="button" style="background: #e0f2fe; border: 1px solid #bae6fd; color: #0369a1; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 11.5px; font-weight: 700;"
                                                 onclick="bukaUserSetting(<?php echo $u['id']; ?>)">
-                                                ⚙️ Setting
+                                                <?php echo ui_icon("settings", 13); ?> Setting
                                             </button>
                                             <?php if (!isset($_SESSION['id_user']) || $u['id'] != $_SESSION['id_user']): ?>
                                                 <form method="POST" action="" onsubmit="return confirm('Apakah Anda yakin ingin menghapus akun @<?php echo addslashes($u['username']); ?>?');" style="display: inline;">
                                                     <input type="hidden" name="id_user_hapus" value="<?php echo $u['id']; ?>">
                                                     <button type="submit" name="hapus_pengguna" style="background: #fee2e2; border: 1px solid #fecaca; color: #dc2626; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 11.5px; font-weight: 700;">
-                                                        🗑️ Hapus
+                                                        <?php echo ui_icon("trash", 13); ?> Hapus
                                                     </button>
                                                 </form>
                                             <?php else: ?>
                                                 <button disabled style="background: #f1f5f9; border: 1px solid var(--border); color: #94a3b8; padding: 5px 10px; border-radius: 6px; font-size: 11.5px; cursor: not-allowed;" title="Tidak dapat menghapus akun sendiri">
-                                                    🔒 Aktif
+                                                    <?php echo ui_icon("check", 13); ?> Aktif
                                                 </button>
                                             <?php endif; ?>
                                         </div>
@@ -2310,13 +2444,13 @@ if (is_owner()) {
             <div class="panel-card" style="margin-bottom: 22px;">
                 <div class="panel-header" style="border-bottom: 1.5px solid var(--border); padding-bottom: 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                     <div>
-                        <h2><span>🛡️</span> Daftar Peran & Hak Akses (RBAC)</h2>
+                        <h2><span><?php echo ui_icon("shield", 20); ?></span> Daftar Peran & Hak Akses (RBAC)</h2>
                         <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
                             Daftar peran sistem UMKM Fillah Food beserta rincian wewenang hak akses modul operasional.
                         </p>
                     </div>
                     <button type="button" class="btn-primary-sm" onclick="bukaModalPeranBaru()" style="padding: 10px 16px; font-size: 12.5px; font-weight: 700;">
-                        ➕ Tambah Peran Baru
+                        <?php echo ui_icon("plus", 14); ?> Tambah Peran Baru
                     </button>
                 </div>
 
@@ -2338,13 +2472,13 @@ if (is_owner()) {
                                 <tr>
                                     <td>
                                         <?php if ($r['nama_peran'] === 'Owner'): ?>
-                                            <span class="badge badge-role-owner" style="font-size: 12px; font-weight: 800;">👑 Owner</span>
+                                            <span class="badge badge-role-owner" style="font-size: 12px; font-weight: 800;"><?php echo ui_icon("crown", 12); ?> Owner</span>
                                         <?php elseif ($r['nama_peran'] === 'Admin'): ?>
-                                            <span class="badge badge-role-admin" style="font-size: 12px; font-weight: 800;">⚙️ Admin</span>
+                                            <span class="badge badge-role-admin" style="font-size: 12px; font-weight: 800;"><?php echo ui_icon("settings", 12); ?> Admin</span>
                                         <?php elseif ($r['nama_peran'] === 'User'): ?>
-                                            <span class="badge badge-role-user" style="font-size: 12px; font-weight: 800;">👤 User</span>
+                                            <span class="badge badge-role-user" style="font-size: 12px; font-weight: 800;"><?php echo ui_icon("user", 12); ?> User</span>
                                         <?php else: ?>
-                                            <span class="badge badge-role-custom" style="font-size: 12px; font-weight: 800;">🛡️ <?php echo htmlspecialchars($r['nama_peran']); ?></span>
+                                            <span class="badge badge-role-custom" style="font-size: 12px; font-weight: 800;"><?php echo ui_icon("shield", 12); ?> <?php echo htmlspecialchars($r['nama_peran']); ?></span>
                                         <?php endif; ?>
                                     </td>
                                     <td>
@@ -2355,19 +2489,19 @@ if (is_owner()) {
                                     <td>
                                         <div style="display: flex; flex-wrap: wrap; gap: 4px;">
                                             <?php if ($r['akses_pos']): ?>
-                                                <span class="badge badge-safe" style="font-size: 10.5px;">✓ POS Kasir</span>
+                                                <span class="badge badge-safe" style="font-size: 10.5px;">&check; POS Kasir</span>
                                             <?php endif; ?>
                                             <?php if ($r['akses_dashboard']): ?>
-                                                <span class="badge badge-safe" style="font-size: 10.5px;">✓ Dashboard</span>
+                                                <span class="badge badge-safe" style="font-size: 10.5px;">&check; Dashboard</span>
                                             <?php endif; ?>
                                             <?php if ($r['akses_stok']): ?>
-                                                <span class="badge badge-safe" style="font-size: 10.5px;">✓ Stok Masuk</span>
+                                                <span class="badge badge-safe" style="font-size: 10.5px;">&check; Stok Masuk</span>
                                             <?php endif; ?>
                                             <?php if ($r['akses_menu']): ?>
-                                                <span class="badge badge-safe" style="font-size: 10.5px;">✓ Kelola Menu</span>
+                                                <span class="badge badge-safe" style="font-size: 10.5px;">&check; Kelola Menu</span>
                                             <?php endif; ?>
                                             <?php if ($r['akses_pengguna']): ?>
-                                                <span class="badge badge-safe" style="font-size: 10.5px;">✓ Kelola Pengguna</span>
+                                                <span class="badge badge-safe" style="font-size: 10.5px;">&check; Kelola Pengguna</span>
                                             <?php endif; ?>
                                             <?php if (!$r['akses_pos'] && !$r['akses_dashboard'] && !$r['akses_stok'] && !$r['akses_menu'] && !$r['akses_pengguna']): ?>
                                                 <span class="badge badge-danger" style="font-size: 10.5px;">Tidak Ada Akses</span>
@@ -2383,18 +2517,18 @@ if (is_owner()) {
                                         <div style="display: flex; gap: 6px; justify-content: center;">
                                             <button type="button" style="background: #f1f5f9; border: 1px solid var(--border); padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 11.5px; font-weight: 700; color: var(--text-dark);"
                                                 onclick="bukaModalEditPeran(<?php echo $r['id']; ?>, '<?php echo addslashes($r['nama_peran']); ?>', '<?php echo addslashes($r['deskripsi']); ?>', <?php echo (int)$r['akses_pos']; ?>, <?php echo (int)$r['akses_dashboard']; ?>, <?php echo (int)$r['akses_stok']; ?>, <?php echo (int)$r['akses_menu']; ?>, <?php echo (int)$r['akses_pengguna']; ?>)">
-                                                ✏️ Edit
+                                                <?php echo ui_icon("edit", 13); ?> Edit
                                             </button>
 
                                             <?php if (!in_array($r['nama_peran'], ['Owner', 'Admin', 'User'])): ?>
                                                 <form method="POST" action="" onsubmit="return confirm('Apakah Anda yakin ingin menghapus peran <?php echo addslashes($r['nama_peran']); ?>?');" style="display: inline;">
                                                     <input type="hidden" name="id_role_hapus" value="<?php echo $r['id']; ?>">
                                                     <button type="submit" name="hapus_peran" style="background: #fee2e2; border: 1px solid #fecaca; color: #dc2626; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 11.5px; font-weight: 700;">
-                                                        🗑️ Hapus
+                                                        <?php echo ui_icon("trash", 13); ?> Hapus
                                                     </button>
                                                 </form>
                                             <?php else: ?>
-                                                <span style="font-size: 11px; color: #94a3b8; padding: 5px 4px; font-weight: 600;" title="Peran inti sistem tidak dapat dihapus">🔒 Sistem</span>
+                                                <span style="font-size: 11px; color: #94a3b8; padding: 5px 4px; font-weight: 600;" title="Peran inti sistem tidak dapat dihapus"><?php echo ui_icon("lock", 12); ?> Sistem</span>
                                             <?php endif; ?>
                                         </div>
                                     </td>
@@ -2414,7 +2548,7 @@ if (is_owner()) {
                 <div class="panel-card">
                     <div class="panel-header" style="border-bottom: 1.5px solid var(--border); padding-bottom: 14px; margin-bottom: 18px;">
                         <div>
-                            <h2><span>⚙️</span> Pengaturan Akun Pengguna</h2>
+                            <h2><span><?php echo ui_icon("settings", 18); ?></span> Pengaturan Akun Pengguna</h2>
                             <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
                                 Sebagai Owner, Anda dapat mengatur profil, email, dan mereset kata sandi staf.
                             </p>
@@ -2438,7 +2572,7 @@ if (is_owner()) {
                         <input type="hidden" name="id_user_setting" id="setting-id-user" value="<?php echo !empty($users_list) ? $users_list[0]['id'] : ''; ?>">
 
                         <div class="form-group">
-                            <label class="form-label">📷 Foto Profil Pengguna <span style="font-weight:400;color:#64748b;">(Opsional — JPG/PNG/WebP, maks 2 MB)</span></label>
+                            <label class="form-label">Foto Profil Pengguna <span style="font-weight:400;color:#64748b;">(Opsional — JPG/PNG/WebP, maks 2 MB)</span></label>
                             <div style="display: flex; align-items: center; gap: 16px; margin-top: 6px; background: #f8fafc; padding: 12px; border-radius: 10px; border: 1.5px solid var(--border);">
                                 <div id="setting-avatar-preview" style="width: 60px; height: 60px; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; border: 2px solid var(--border); flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.06);
                                     <?php 
@@ -2455,7 +2589,7 @@ if (is_owner()) {
                                 </div>
                                 <div style="flex: 1;">
                                     <button type="button" class="btn-primary-sm" style="background: #ffffff; color: var(--text-dark); border: 1.5px solid var(--border); padding: 7px 14px; font-size: 12px; font-weight: 700;" onclick="document.getElementById('input-foto-user').click()">
-                                        📁 Pilih Foto Baru
+                                        <?php echo ui_icon("folder", 14); ?> Pilih Foto Baru
                                     </button>
                                     <input type="file" id="input-foto-user" name="foto_user_setting" accept="image/*" style="display: none;" onchange="previewFotoUser(this)">
                                     <div id="nama-file-user" style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Klik tombol di atas untuk memilih foto</div>
@@ -2486,17 +2620,17 @@ if (is_owner()) {
                                 <?php 
                                     $first_role = !empty($users_list) ? $users_list[0]['role'] : 'User';
                                     if ($first_role === 'Owner'): ?>
-                                        <span class="badge badge-role-owner" id="setting-role-badge">👑 Owner (Pemilik Usaha)</span>
+                                        <span class="badge badge-role-owner" id="setting-role-badge"><?php echo ui_icon("crown", 12); ?> Owner (Pemilik Usaha)</span>
                                     <?php elseif ($first_role === 'Admin'): ?>
-                                        <span class="badge badge-role-admin" id="setting-role-badge">⚙️ Admin (Staf Persediaan)</span>
+                                        <span class="badge badge-role-admin" id="setting-role-badge"><?php echo ui_icon("settings", 12); ?> Admin (Staf Persediaan)</span>
                                     <?php elseif ($first_role === 'User'): ?>
-                                        <span class="badge badge-role-user" id="setting-role-badge">👤 User (Staf Operasional / POS)</span>
+                                        <span class="badge badge-role-user" id="setting-role-badge"><?php echo ui_icon("user", 12); ?> User (Staf Operasional / POS)</span>
                                     <?php else: ?>
-                                        <span class="badge badge-role-custom" id="setting-role-badge">🛡️ <?php echo htmlspecialchars($first_role); ?></span>
+                                        <span class="badge badge-role-custom" id="setting-role-badge"><?php echo ui_icon("shield", 12); ?> <?php echo htmlspecialchars($first_role); ?></span>
                                     <?php endif; ?>
                             </div>
                             <small style="color: var(--text-muted); font-size: 11px;">
-                                🔒 Peran akun dikunci di User Setting. Pengaturan peran hanya dapat diubah melalui menu <strong>Pengelolaan Pengguna</strong> atau <strong>Peran</strong>.
+                                <?php echo ui_icon("lock", 13); ?> Peran akun dikunci di User Setting. Pengaturan peran hanya dapat diubah melalui menu <strong>Pengelolaan Pengguna</strong> atau <strong>Peran</strong>.
                             </small>
                         </div>
 
@@ -2508,7 +2642,7 @@ if (is_owner()) {
 
                         <div style="margin-top: 20px;">
                             <button type="submit" name="simpan_setting_user" class="btn-primary-sm" style="padding: 12px 20px; width: 100%; justify-content: center; font-size: 13px;">
-                                💾 Simpan Pengaturan Pengguna
+                                <?php echo ui_icon("save", 15); ?> Simpan Pengaturan Pengguna
                             </button>
                         </div>
                     </form>
@@ -2518,7 +2652,7 @@ if (is_owner()) {
                 <div class="panel-card">
                     <div class="panel-header" style="border-bottom: 1.5px solid var(--border); padding-bottom: 14px; margin-bottom: 18px;">
                         <div>
-                            <h2><span>👤</span> Profil & Sandi Saya (Owner)</h2>
+                            <h2><span><?php echo ui_icon("user", 20); ?></span> Profil & Sandi Saya (Owner)</h2>
                             <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
                                 Pengaturan profil dan kata sandi akun Owner Anda yang sedang aktif.
                             </p>
@@ -2530,7 +2664,7 @@ if (is_owner()) {
                             <?php if (!empty($current_user_foto) && file_exists(__DIR__ . '/' . $current_user_foto)): ?>
                                 <img src="<?php echo htmlspecialchars($current_user_foto); ?>" style="width: 100%; height: 100%; object-fit: cover;">
                             <?php else: ?>
-                                👑
+                                
                             <?php endif; ?>
                         </div>
                         <div style="flex: 1;">
@@ -2545,18 +2679,18 @@ if (is_owner()) {
 
                     <form method="POST" action="" enctype="multipart/form-data">
                         <div class="form-group">
-                            <label class="form-label">📷 Foto Profil Saya <span style="font-weight:400;color:#64748b;">(Opsional — JPG/PNG/WebP, maks 2 MB)</span></label>
+                            <label class="form-label">Foto Profil Saya <span style="font-weight:400;color:#64748b;">(Opsional — JPG/PNG/WebP, maks 2 MB)</span></label>
                             <div style="display: flex; align-items: center; gap: 16px; margin-top: 6px; background: #f8fafc; padding: 12px; border-radius: 10px; border: 1.5px solid var(--border);">
                                 <div id="profil-saya-preview" style="width: 60px; height: 60px; border-radius: 50%; overflow: hidden; background: #fef3c7; color: #b45309; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; border: 2px solid #fde68a; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
                                     <?php if (!empty($current_user_foto) && file_exists(__DIR__ . '/' . $current_user_foto)): ?>
                                         <img src="<?php echo htmlspecialchars($current_user_foto); ?>" style="width: 100%; height: 100%; object-fit: cover;">
                                     <?php else: ?>
-                                        👑
+                                        
                                     <?php endif; ?>
                                 </div>
                                 <div style="flex: 1;">
                                     <button type="button" class="btn-primary-sm" style="background: #ffffff; color: var(--text-dark); border: 1.5px solid var(--border); padding: 7px 14px; font-size: 12px; font-weight: 700;" onclick="document.getElementById('input-foto-saya').click()">
-                                        📁 Ganti Foto Profil
+                                        <?php echo ui_icon("folder", 14); ?> Ganti Foto Profil
                                     </button>
                                     <input type="file" id="input-foto-saya" name="foto_profil_saya" accept="image/*" style="display: none;" onchange="previewFotoSaya(this)">
                                     <div id="nama-file-saya" style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Pilih foto dari komputer Anda</div>
@@ -2588,7 +2722,7 @@ if (is_owner()) {
 
                         <div style="margin-top: 20px;">
                             <button type="submit" name="simpan_profil_saya" class="btn-primary-sm" style="padding: 12px 20px; width: 100%; justify-content: center; font-size: 13px; background: #0284c7;">
-                                🔒 Perbarui Profil & Sandi Saya
+                                <?php echo ui_icon("save", 15); ?> Perbarui Profil & Sandi Saya
                             </button>
                         </div>
                     </form>
@@ -2604,7 +2738,7 @@ if (is_owner()) {
     <!-- Modal Form Tambah Stok Masuk -->
     <div class="modal-overlay" id="modal-stok-masuk">
         <div class="modal-box">
-            <h3 class="modal-title">📥 Catat Stok Masuk (Belanja Bahan)</h3>
+            <h3 class="modal-title">Catat Stok Masuk (Belanja Bahan)</h3>
             <form method="POST" action="">
                 <div class="form-group">
                     <label class="form-label">Pilih Bahan Baku</label>
@@ -2638,7 +2772,7 @@ if (is_owner()) {
     <!-- Modal Form Tambah Bahan Baru -->
     <div class="modal-overlay" id="modal-bahan-baru">
         <div class="modal-box">
-            <h3 class="modal-title">✨ Tambah Bahan Baku Baru</h3>
+            <h3 class="modal-title">Tambah Bahan Baku Baru</h3>
             <form method="POST" action="" enctype="multipart/form-data">
                 <div class="form-group">
                     <label class="form-label">Nama Bahan Baku</label>
@@ -2661,10 +2795,10 @@ if (is_owner()) {
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">📷 Foto Bahan Baku <span style="font-weight:400;color:#64748b;">(Opsional — maks 2 MB, JPG/PNG/WebP)</span></label>
+                    <label class="form-label"> Foto Bahan Baku <span style="font-weight:400;color:#64748b;">(Opsional — maks 2 MB, JPG/PNG/WebP)</span></label>
                     <div class="img-upload-area" onclick="document.getElementById('input-gambar-bahan').click()">
                         <div class="img-upload-preview" id="preview-bahan">
-                            <span class="img-upload-icon">📦</span>
+                            <span class="img-upload-icon"><?php echo ui_icon("box", 32); ?></span>
                             <span class="img-upload-hint">Klik untuk pilih foto</span>
                         </div>
                     </div>
@@ -2682,7 +2816,7 @@ if (is_owner()) {
     <!-- Modal Form Tambah Menu Produk Baru -->
     <div class="modal-overlay" id="modal-produk-baru">
         <div class="modal-box">
-            <h3 class="modal-title">🍗 Tambah Menu Makanan / Minuman Baru</h3>
+            <h3 class="modal-title">Tambah Menu Makanan / Minuman Baru</h3>
             <form method="POST" action="" enctype="multipart/form-data">
                 <div class="form-group">
                     <label class="form-label">Nama Menu Makanan / Minuman</label>
@@ -2703,10 +2837,10 @@ if (is_owner()) {
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">📷 Foto Menu <span style="font-weight:400;color:#64748b;">(Opsional — maks 2 MB, JPG/PNG/WebP)</span></label>
+                    <label class="form-label"> Foto Menu <span style="font-weight:400;color:#64748b;">(Opsional — maks 2 MB, JPG/PNG/WebP)</span></label>
                     <div class="img-upload-area" onclick="document.getElementById('input-gambar-produk').click()">
                         <div class="img-upload-preview" id="preview-produk">
-                            <span class="img-upload-icon" id="preview-produk-icon">🍗</span>
+                            <span class="img-upload-icon" id="preview-produk-icon"><?php echo ui_icon("utensils", 32); ?></span>
                             <span class="img-upload-hint">Klik untuk pilih foto</span>
                         </div>
                     </div>
@@ -2724,7 +2858,7 @@ if (is_owner()) {
     <!-- Modal Form Catat Stok Keluar / Bahan Rusak & Basi -->
     <div class="modal-overlay" id="modal-stok-keluar">
         <div class="modal-box">
-            <h3 class="modal-title">📤 Catat Bahan Rusak / Basi (Outbound)</h3>
+            <h3 class="modal-title">Catat Bahan Rusak / Basi (Outbound)</h3>
             <p style="font-size:12px; color:var(--text-muted); margin-top:-6px; margin-bottom:14px;">Catat bahan baku yang rusak, basi, kadaluwarsa, atau tumpah untuk memotong stok fisik.</p>
             <form method="POST" action="">
                 <div class="form-group">
@@ -2770,7 +2904,7 @@ if (is_owner()) {
     <!-- Modal Edit Bahan Baku -->
     <div class="modal-overlay" id="modal-edit-bahan">
         <div class="modal-box">
-            <h3 class="modal-title">✏️ Edit Bahan Baku</h3>
+            <h3 class="modal-title"><?php echo ui_icon("edit", 13); ?> Edit Bahan Baku</h3>
             <form method="POST" action="" enctype="multipart/form-data">
                 <input type="hidden" name="id_bahan" id="edit-id-bahan">
                 
@@ -2793,7 +2927,7 @@ if (is_owner()) {
                     <label class="form-label">Ganti Foto Bahan Baku (Opsional)</label>
                     <div class="img-upload-area" onclick="document.getElementById('input-edit-gambar-bahan').click()">
                         <div class="img-upload-preview" id="preview-edit-bahan">
-                            <span class="img-upload-icon">📦</span>
+                            <span class="img-upload-icon"><?php echo ui_icon("box", 32); ?></span>
                             <span class="img-upload-hint">Klik untuk ganti foto</span>
                         </div>
                     </div>
@@ -2811,7 +2945,7 @@ if (is_owner()) {
     <!-- Modal Edit Menu Produk -->
     <div class="modal-overlay" id="modal-edit-produk">
         <div class="modal-box">
-            <h3 class="modal-title">✏️ Edit Menu Makanan / Minuman</h3>
+            <h3 class="modal-title"><?php echo ui_icon("edit", 13); ?> Edit Menu Makanan / Minuman</h3>
             <form method="POST" action="" enctype="multipart/form-data">
                 <input type="hidden" name="id_produk" id="edit-id-produk">
 
@@ -2837,7 +2971,7 @@ if (is_owner()) {
                     <label class="form-label">Ganti Foto Menu (Opsional)</label>
                     <div class="img-upload-area" onclick="document.getElementById('input-edit-gambar-produk').click()">
                         <div class="img-upload-preview" id="preview-edit-produk">
-                            <span class="img-upload-icon">🍗</span>
+                            <span class="img-upload-icon"><?php echo ui_icon("utensils", 32); ?></span>
                             <span class="img-upload-hint">Klik untuk ganti foto</span>
                         </div>
                     </div>
@@ -2855,7 +2989,7 @@ if (is_owner()) {
     <!-- Modal Atur Resep & Komposisi Bahan Baku (BOM) -->
     <div class="modal-overlay" id="modal-atur-resep">
         <div class="modal-box" style="max-width: 580px;">
-            <h3 class="modal-title">⚙️ Formula Resep: <span id="resep-nama-menu" style="color:var(--primary);">Menu</span></h3>
+            <h3 class="modal-title">Formula Resep: <span id="resep-nama-menu" style="color:var(--primary);">Menu</span></h3>
             <p style="font-size:12px; color:var(--text-muted); margin-top:-6px; margin-bottom:16px;">Tentukan komposisi takaran bahan baku yang terpotong otomatis saat menu ini terjual di kasir.</p>
 
             <!-- Tabel Komposisi Bahan Saat Ini -->
@@ -2914,7 +3048,7 @@ if (is_owner()) {
     <?php if (is_owner()): ?>
     <div class="modal-overlay" id="modal-pengguna-baru">
         <div class="modal-box">
-            <h3 class="modal-title">👥 Tambah Pengguna Baru</h3>
+            <h3 class="modal-title">Tambah Pengguna Baru</h3>
             <form method="POST" action="">
                 <div class="form-group">
                     <label class="form-label">Nama Lengkap Pengguna</label>
@@ -2942,10 +3076,10 @@ if (is_owner()) {
                         <?php foreach ($roles_list as $rl): ?>
                             <option value="<?php echo htmlspecialchars($rl['nama_peran']); ?>" <?php echo ($rl['nama_peran'] === 'User') ? 'selected' : ''; ?>>
                                 <?php 
-                                    if ($rl['nama_peran'] === 'Owner') echo '👑 Owner (Pemilik Usaha - Akses Penuh)';
-                                    elseif ($rl['nama_peran'] === 'Admin') echo '⚙️ Admin (Staf Pengelola Persediaan & Menu)';
-                                    elseif ($rl['nama_peran'] === 'User') echo '👤 User (Staf Operasional / Layar Kasir POS)';
-                                    else echo '🛡️ ' . htmlspecialchars($rl['nama_peran']) . ' (' . htmlspecialchars($rl['deskripsi']) . ')';
+                                    if ($rl['nama_peran'] === 'Owner') echo '<?php echo ui_icon("crown", 12); ?> Owner (Pemilik Usaha - Akses Penuh)';
+                                    elseif ($rl['nama_peran'] === 'Admin') echo '<?php echo ui_icon("settings", 12); ?> Admin (Staf Pengelola Persediaan & Menu)';
+                                    elseif ($rl['nama_peran'] === 'User') echo '<?php echo ui_icon("user", 12); ?> User (Staf Operasional / Layar Kasir POS)';
+                                    else echo '<?php echo ui_icon("shield", 12); ?> ' . htmlspecialchars($rl['nama_peran']) . ' (' . htmlspecialchars($rl['deskripsi']) . ')';
                                 ?>
                             </option>
                         <?php endforeach; ?>
@@ -2963,7 +3097,7 @@ if (is_owner()) {
     <!-- Modal Form Edit Pengguna & Peran (Khusus Owner) -->
     <div class="modal-overlay" id="modal-edit-pengguna">
         <div class="modal-box">
-            <h3 class="modal-title">✏️ Edit Pengguna & Peran Hak Akses</h3>
+            <h3 class="modal-title"><?php echo ui_icon("edit", 13); ?> Edit Pengguna & Peran Hak Akses</h3>
             <form method="POST" action="">
                 <input type="hidden" name="id_user" id="edit-id-user">
 
@@ -2988,10 +3122,10 @@ if (is_owner()) {
                         <?php foreach ($roles_list as $rl): ?>
                             <option value="<?php echo htmlspecialchars($rl['nama_peran']); ?>">
                                 <?php 
-                                    if ($rl['nama_peran'] === 'Owner') echo '👑 Owner (Pemilik Usaha - Akses Penuh)';
-                                    elseif ($rl['nama_peran'] === 'Admin') echo '⚙️ Admin (Staf Pengelola Persediaan & Menu)';
-                                    elseif ($rl['nama_peran'] === 'User') echo '👤 User (Staf Operasional / Layar Kasir POS)';
-                                    else echo '🛡️ ' . htmlspecialchars($rl['nama_peran']) . ' (' . htmlspecialchars($rl['deskripsi']) . ')';
+                                    if ($rl['nama_peran'] === 'Owner') echo '<?php echo ui_icon("crown", 12); ?> Owner (Pemilik Usaha - Akses Penuh)';
+                                    elseif ($rl['nama_peran'] === 'Admin') echo '<?php echo ui_icon("settings", 12); ?> Admin (Staf Pengelola Persediaan & Menu)';
+                                    elseif ($rl['nama_peran'] === 'User') echo '<?php echo ui_icon("user", 12); ?> User (Staf Operasional / Layar Kasir POS)';
+                                    else echo '<?php echo ui_icon("shield", 12); ?> ' . htmlspecialchars($rl['nama_peran']) . ' (' . htmlspecialchars($rl['deskripsi']) . ')';
                                 ?>
                             </option>
                         <?php endforeach; ?>
@@ -3014,7 +3148,7 @@ if (is_owner()) {
     <!-- Modal Form Tambah Peran Baru (Khusus Owner) -->
     <div class="modal-overlay" id="modal-tambah-peran">
         <div class="modal-box" style="max-width: 500px;">
-            <h3 class="modal-title">🛡️ Tambah Peran Baru</h3>
+            <h3 class="modal-title"><?php echo ui_icon("shield", 12); ?> Tambah Peran Baru</h3>
             <form method="POST" action="">
                 <div class="form-group">
                     <label class="form-label">Nama Peran</label>
@@ -3031,23 +3165,23 @@ if (is_owner()) {
                     <div style="display: flex; flex-direction: column; gap: 8px; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1.5px solid var(--border);">
                         <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
                             <input type="checkbox" name="akses_pos" value="1" checked style="width: 16px; height: 16px;">
-                            <span>🛒 Layar Kasir POS (Pencatatan Pesanan & Transaksi)</span>
+                            <span>Layar Kasir POS (Pencatatan Pesanan & Transaksi)</span>
                         </label>
                         <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
                             <input type="checkbox" name="akses_dashboard" value="1" style="width: 16px; height: 16px;">
-                            <span>📊 Dashboard Ringkasan Omzet & KPI Bisnis</span>
+                            <span>Dashboard Ringkasan Omzet & KPI Bisnis</span>
                         </label>
                         <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
                             <input type="checkbox" name="akses_stok" value="1" style="width: 16px; height: 16px;">
-                            <span>📦 Pencatatan Pasokan Stok Bahan Masuk</span>
+                            <span>Pencatatan Pasokan Stok Bahan Masuk</span>
                         </label>
                         <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
                             <input type="checkbox" name="akses_menu" value="1" style="width: 16px; height: 16px;">
-                            <span>🍗 Manajemen Menu Makanan & Minuman</span>
+                            <span>Manajemen Menu Makanan & Minuman</span>
                         </label>
                         <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
                             <input type="checkbox" name="akses_pengguna" value="1" style="width: 16px; height: 16px;">
-                            <span>👥 Pengelolaan Akun Pengguna & Pengaturan</span>
+                            <span>Pengelolaan Akun Pengguna & Pengaturan</span>
                         </label>
                     </div>
                 </div>
@@ -3063,7 +3197,7 @@ if (is_owner()) {
     <!-- Modal Form Edit Peran (Khusus Owner) -->
     <div class="modal-overlay" id="modal-edit-peran">
         <div class="modal-box" style="max-width: 500px;">
-            <h3 class="modal-title">✏️ Edit Data Peran & Hak Akses</h3>
+            <h3 class="modal-title"><?php echo ui_icon("edit", 13); ?> Edit Data Peran & Hak Akses</h3>
             <form method="POST" action="">
                 <input type="hidden" name="id_role" id="edit-id-role">
 
@@ -3083,23 +3217,23 @@ if (is_owner()) {
                     <div style="display: flex; flex-direction: column; gap: 8px; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1.5px solid var(--border);">
                         <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
                             <input type="checkbox" name="akses_pos" id="edit-akses-pos" value="1" style="width: 16px; height: 16px;">
-                            <span>🛒 Layar Kasir POS (Pencatatan Pesanan & Transaksi)</span>
+                            <span>Layar Kasir POS (Pencatatan Pesanan & Transaksi)</span>
                         </label>
                         <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
                             <input type="checkbox" name="akses_dashboard" id="edit-akses-dash" value="1" style="width: 16px; height: 16px;">
-                            <span>📊 Dashboard Ringkasan Omzet & KPI Bisnis</span>
+                            <span>Dashboard Ringkasan Omzet & KPI Bisnis</span>
                         </label>
                         <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
                             <input type="checkbox" name="akses_stok" id="edit-akses-stok" value="1" style="width: 16px; height: 16px;">
-                            <span>📦 Pencatatan Pasokan Stok Bahan Masuk</span>
+                            <span>Pencatatan Pasokan Stok Bahan Masuk</span>
                         </label>
                         <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
                             <input type="checkbox" name="akses_menu" id="edit-akses-menu" value="1" style="width: 16px; height: 16px;">
-                            <span>🍗 Manajemen Menu Makanan & Minuman</span>
+                            <span>Manajemen Menu Makanan & Minuman</span>
                         </label>
                         <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
                             <input type="checkbox" name="akses_pengguna" id="edit-akses-peng" value="1" style="width: 16px; height: 16px;">
-                            <span>👥 Pengelolaan Akun Pengguna & Pengaturan</span>
+                            <span>Pengelolaan Akun Pengguna & Pengaturan</span>
                         </label>
                     </div>
                 </div>
@@ -3126,7 +3260,7 @@ if (is_owner()) {
         }
         function tutupModalBahanBaru() {
             // Reset preview saat modal ditutup
-            resetPreview('preview-bahan', '📦');
+            resetPreview('preview-bahan', 'Bahan');
             document.getElementById('input-gambar-bahan').value = '';
             document.getElementById('modal-bahan-baru').style.display = 'none';
         }
@@ -3135,7 +3269,7 @@ if (is_owner()) {
         }
         function tutupModalProdukBaru() {
             // Reset preview saat modal ditutup
-            resetPreview('preview-produk', '🍗');
+            resetPreview('preview-produk', 'Menu');
             document.getElementById('input-gambar-produk').value = '';
             document.getElementById('modal-produk-baru').style.display = 'none';
         }
@@ -3174,7 +3308,7 @@ if (is_owner()) {
                 if (b.gambar) {
                     preview.innerHTML = '<img src="' + b.gambar + '" style="width:100%; height:100%; object-fit:cover;">';
                 } else {
-                    resetPreview('preview-edit-bahan', '📦');
+                    resetPreview('preview-edit-bahan', 'Bahan');
                 }
             }
             document.getElementById('input-edit-gambar-bahan').value = '';
@@ -3195,7 +3329,7 @@ if (is_owner()) {
                 if (p.gambar) {
                     preview.innerHTML = '<img src="' + p.gambar + '" style="width:100%; height:100%; object-fit:cover;">';
                 } else {
-                    var icon = (p.kategori === 'Minuman') ? '🥤' : '🍗';
+                    var icon = (p.kategori === 'Minuman') ? 'Minuman' : 'Makanan';
                     resetPreview('preview-edit-produk', icon);
                 }
             }
@@ -3241,7 +3375,7 @@ if (is_owner()) {
                     '<td style="text-align:right;">' +
                         '<form method="POST" action="" style="display:inline;" onsubmit="return confirm(\'Keluarkan ' + item.nama_bahan + ' dari resep menu ini?\');">' +
                             '<input type="hidden" name="id_resep" value="' + item.id + '">' +
-                            '<button type="submit" name="hapus_resep_item" class="btn-table-action btn-danger-sm" title="Hapus dari Resep">✕</button>' +
+                            '<button type="submit" name="hapus_resep_item" class="btn-table-action btn-danger-sm" title="Hapus dari Resep">&times;</button>' +
                         '</form>' +
                     '</td>' +
                 '</tr>';
@@ -3324,7 +3458,7 @@ if (is_owner()) {
             if (nama === 'Owner') {
                 namaInput.readOnly = true;
                 namaInput.style.background = '#f1f5f9';
-                if (hintInput) hintInput.textContent = '🔒 Peran Owner memiliki wewenang penuh dan nama tidak dapat diubah.';
+                if (hintInput) hintInput.textContent = 'Peran Owner memiliki wewenang penuh dan nama tidak dapat diubah.';
             } else {
                 namaInput.readOnly = false;
                 namaInput.style.background = '#ffffff';
@@ -3446,19 +3580,19 @@ if (is_owner()) {
             if (roleBadge) {
                 if (u.role === 'Owner') {
                     roleBadge.className = 'badge badge-role-owner';
-                    roleBadge.textContent = '👑 Owner (Pemilik Usaha)';
+                    roleBadge.textContent = '<?php echo ui_icon("crown", 12); ?> Owner (Pemilik Usaha)';
                 } else if (u.role === 'Admin') {
                     roleBadge.className = 'badge badge-role-admin';
-                    roleBadge.textContent = '⚙️ Admin (Staf Persediaan)';
+                    roleBadge.textContent = '<?php echo ui_icon("settings", 12); ?> Admin (Staf Persediaan)';
                 } else if (u.role === 'User') {
                     roleBadge.className = 'badge badge-role-user';
-                    roleBadge.textContent = '👤 User (Staf Operasional / POS)';
+                    roleBadge.textContent = '<?php echo ui_icon("user", 12); ?> User (Staf Operasional / POS)';
                 } else if (u.role === 'Kasir') {
                     roleBadge.className = 'badge badge-role-kasir';
-                    roleBadge.textContent = '🛒 Kasir (Layar Kasir POS)';
+                    roleBadge.textContent = '<?php echo ui_icon("cart", 12); ?> Kasir (Layar Kasir POS)';
                 } else {
                     roleBadge.className = 'badge badge-role-custom';
-                    roleBadge.textContent = '🛡️ ' + u.role;
+                    roleBadge.textContent = '<?php echo ui_icon("shield", 12); ?> ' + u.role;
                 }
             }
         }
@@ -3591,7 +3725,7 @@ if (is_owner()) {
             // Hanya update default icon jika belum ada gambar dipilih
             const input = document.getElementById('input-gambar-produk');
             if (!input.files || !input.files[0]) {
-                const icon = kategori === 'Minuman' ? '🥤' : '🍗';
+                const icon = kategori === 'Minuman' ? 'Minuman' : 'Makanan';
                 resetPreview('preview-produk', icon);
             }
         }

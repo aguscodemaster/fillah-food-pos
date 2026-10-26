@@ -79,6 +79,18 @@ if ($result) {
             font-size: 11px;
             font-weight: 700;
             white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #22c55e;
+            box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.4);
+            display: inline-block;
         }
 
         .location-info {
@@ -260,18 +272,27 @@ if ($result) {
         <!-- Banner Header -->
         <header class="banner-header">
             <div class="brand-row">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 26px;">🍗</span>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 36px; height: 36px; background: rgba(255,255,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"></path>
+                            <path d="M7 2v20"></path>
+                            <path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"></path>
+                        </svg>
+                    </div>
                     <div>
                         <h1 class="brand-title">Fillah Food</h1>
                         <p style="font-size: 11px; opacity: 0.9;">Spesialis Ayam Geprek & Kuliner</p>
                     </div>
                 </div>
-                <span class="status-badge">🟢 Buka (10:00 - 21:00)</span>
+                <span class="status-badge"><span class="status-dot"></span> Buka (10:00 - 21:00)</span>
             </div>
 
             <div class="location-info">
-                <span>📍 Gumukmas, Jember</span>
+                <span style="display:inline-flex; align-items:center; gap:5px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                    <span>Gumukmas, Jember</span>
+                </span>
                 <span style="font-weight: 700; color: #fff;">Meja Pelanggan</span>
             </div>
         </header>
@@ -279,8 +300,8 @@ if ($result) {
         <!-- Category Scroll Tabs -->
         <div class="cat-scroll">
             <button class="cat-btn active" onclick="filterCat('Semua')">Semua Menu</button>
-            <button class="cat-btn" onclick="filterCat('Makanan')">🍗 Makanan</button>
-            <button class="cat-btn" onclick="filterCat('Minuman')">🥤 Minuman</button>
+            <button class="cat-btn" onclick="filterCat('Makanan')">Makanan</button>
+            <button class="cat-btn" onclick="filterCat('Minuman')">Minuman</button>
         </div>
 
         <!-- Menu List -->
@@ -293,7 +314,11 @@ if ($result) {
                                  alt="<?php echo htmlspecialchars($item['nama_produk']); ?>"
                                  style="width:100%;height:100%;object-fit:cover;">
                         <?php else: ?>
-                            <?php echo ($item['kategori'] === 'Makanan') ? '🍗' : '🥤'; ?>
+                            <?php if ($item['kategori'] === 'Makanan'): ?>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"></path><path d="M7 2v20"></path><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"></path></svg>
+                            <?php else: ?>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1a4 4 0 1 1 0 8h-1"></path><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"></path><line x1="6" y1="2" x2="6" y2="4"></line><line x1="10" y1="2" x2="10" y2="4"></line><line x1="14" y1="2" x2="14" y2="4"></line></svg>
+                            <?php endif; ?>
                         <?php endif; ?>
                     </div>
                     <div class="menu-info">
@@ -316,8 +341,9 @@ if ($result) {
                 <div style="font-size: 11px; color: var(--text-muted);">Sudah memilih menu?</div>
                 <div style="font-size: 12.5px; font-weight: 700;">Sebutkan ke Kasir di Depan</div>
             </div>
-            <button class="btn-call" onclick="alert('Silakan sebutkan nomor Meja dan pesanan Anda ke Kasir di depan ya kak!')">
-                📢 Panggil Kasir
+            <button class="btn-call" onclick="alert('Silakan sebutkan nomor Meja dan pesanan Anda ke Kasir di depan ya kak!')" style="display:inline-flex; align-items:center; gap:6px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>
+                <span>Panggil Kasir</span>
             </button>
         </footer>
     </div>

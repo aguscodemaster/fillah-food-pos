@@ -1149,7 +1149,13 @@ $waktu_sekarang = date('d/m/Y H:i:s') . ' WIB';
     <!-- Header Navbar -->
     <header class="navbar">
         <div class="navbar-brand">
-            <div class="brand-logo">🍗</div>
+            <div class="brand-logo">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"></path>
+                    <path d="M7 2v20"></path>
+                    <path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"></path>
+                </svg>
+            </div>
             <div class="brand-text">
                 <h1>Fillah Food POS</h1>
                 <p>Mode Operasional Kasir</p>
@@ -1161,13 +1167,19 @@ $waktu_sekarang = date('d/m/Y H:i:s') . ' WIB';
                 <?php if (!empty($_SESSION['foto']) && file_exists(__DIR__ . '/' . $_SESSION['foto'])): ?>
                     <img src="<?php echo htmlspecialchars($_SESSION['foto']); ?>" alt="Foto" style="width: 22px; height: 22px; border-radius: 50%; object-fit: cover;">
                 <?php else: ?>
-                    <span>👤</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                 <?php endif; ?>
                 <strong><?php echo htmlspecialchars($_SESSION['username']); ?></strong> (<?php echo htmlspecialchars($_SESSION['role']); ?>)
             </span>
-            <a href="menu.php" target="_blank" class="btn-link">📱 E-Menu Pelanggan</a>
+            <a href="menu.php" target="_blank" class="btn-link" style="display:inline-flex; align-items:center; gap:5px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"></rect><path d="M12 18h.01"></path></svg>
+                <span>E-Menu Pelanggan</span>
+            </a>
             <?php if (in_array($_SESSION['role'], ['Owner', 'Admin'])): ?>
-                <a href="admin.php" class="btn-link">⚙️ Dashboard Manajemen</a>
+                <a href="admin.php" class="btn-link" style="display:inline-flex; align-items:center; gap:5px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    <span>Dashboard Manajemen</span>
+                </a>
             <?php endif; ?>
             <a href="logout.php" class="btn-logout">Keluar (Logout)</a>
         </div>
@@ -1176,10 +1188,12 @@ $waktu_sekarang = date('d/m/Y H:i:s') . ' WIB';
     <!-- Mobile View Switcher Tabs (Only visible on screens <= 850px) -->
     <div class="kasir-view-tabs">
         <button type="button" class="view-tab-btn active" id="tab-btn-menu" onclick="switchKasirView('menu')">
-            <span>🍽️</span> Katalog Menu
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path><path d="M6 6h10"></path><path d="M6 10h10"></path></svg>
+            <span>Katalog Menu</span>
         </button>
         <button type="button" class="view-tab-btn" id="tab-btn-cart" onclick="switchKasirView('cart')">
-            <span>🛒</span> Keranjang <span class="view-tab-badge cart-badge-count">0</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path></svg>
+            <span>Keranjang</span> <span class="view-tab-badge cart-badge-count">0</span>
         </button>
     </div>
 
@@ -1191,12 +1205,14 @@ $waktu_sekarang = date('d/m/Y H:i:s') . ' WIB';
             <div class="catalog-toolbar">
                 <div class="category-pills">
                     <button class="cat-btn active" onclick="filterKategori('Semua')">Semua Menu</button>
-                    <button class="cat-btn" onclick="filterKategori('Makanan')">🍗 Makanan</button>
-                    <button class="cat-btn" onclick="filterKategori('Minuman')">🥤 Minuman</button>
+                    <button class="cat-btn" onclick="filterKategori('Makanan')">Makanan</button>
+                    <button class="cat-btn" onclick="filterKategori('Minuman')">Minuman</button>
                 </div>
 
                 <div class="search-box">
-                    <span class="search-icon">🔍</span>
+                    <span class="search-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    </span>
                     <input type="text" id="cari-menu" class="search-input" placeholder="Cari nama menu..." onkeyup="cariMenuLive()">
                 </div>
             </div>
@@ -1220,7 +1236,11 @@ $waktu_sekarang = date('d/m/Y H:i:s') . ' WIB';
                                          alt="<?php echo htmlspecialchars($p['nama_produk']); ?>"
                                          style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
                                 <?php else: ?>
-                                    <?php echo ($p['kategori'] === 'Makanan') ? '🍗' : '🥤'; ?>
+                                    <?php if ($p['kategori'] === 'Makanan'): ?>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"></path><path d="M7 2v20"></path><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"></path></svg>
+                                    <?php else: ?>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1a4 4 0 1 1 0 8h-1"></path><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"></path><line x1="6" y1="2" x2="6" y2="4"></line><line x1="10" y1="2" x2="10" y2="4"></line><line x1="14" y1="2" x2="14" y2="4"></line></svg>
+                                    <?php endif; ?>
                                 <?php endif; ?>
                             </div>
                             
@@ -1242,7 +1262,10 @@ $waktu_sekarang = date('d/m/Y H:i:s') . ' WIB';
                 <button type="button" class="btn-back-to-menu" onclick="switchKasirView('menu')">
                     ← Kembali
                 </button>
-                <h2><span>🛒</span> Pesanan Saat Ini</h2>
+                <h2>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path></svg>
+                    <span>Pesanan Saat Ini</span>
+                </h2>
                 <button class="btn-clear-cart" onclick="kosongkanKeranjang()">Kosongkan</button>
             </div>
 
@@ -1270,9 +1293,11 @@ $waktu_sekarang = date('d/m/Y H:i:s') . ' WIB';
             <!-- List Item Keranjang -->
             <div class="cart-items-wrapper" id="cart-items-container">
                 <div id="cart-empty-state" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
-                    <div style="font-size: 36px; margin-bottom: 8px;">🛒</div>
-                    <p style="font-size: 13px; font-weight: 600;">Keranjang belanja masih kosong</p>
-                    <p style="font-size: 11px; margin-top: 4px;">Klik salah satu menu di sebelah kiri untuk menambahkan pesanan.</p>
+                    <div style="display: flex; justify-content: center; margin-bottom: 12px; color: #cbd5e1;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path></svg>
+                    </div>
+                    <p style="font-size: 14px; font-weight: 700; color: #475569;">Keranjang Masih Kosong</p>
+                    <p style="font-size: 12px; margin-top: 4px; color: #94a3b8;">Klik salah satu menu di sebelah kiri untuk menambahkan pesanan.</p>
                 </div>
             </div>
 
@@ -1311,8 +1336,9 @@ $waktu_sekarang = date('d/m/Y H:i:s') . ' WIB';
                     <span id="label-kembalian" style="font-size: 16px;">Rp 0</span>
                 </div>
 
-                <button class="btn-checkout" onclick="prosesBayarDanCetak()">
-                    <span>💳</span> Proses Bayar & Cetak Struk
+                <button class="btn-checkout" onclick="prosesBayarDanCetak()" style="display:inline-flex; align-items:center; justify-content:center; gap:8px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+                    <span>Proses Bayar & Cetak Struk</span>
                 </button>
             </div>
         </aside>
@@ -1321,11 +1347,15 @@ $waktu_sekarang = date('d/m/Y H:i:s') . ' WIB';
     <!-- Mobile Floating Checkout Bar (Hanya tampil pada mobile/tablet saat ada item) -->
     <div class="mobile-floating-cart" id="mobile-floating-cart" onclick="switchKasirView('cart')">
         <div class="float-cart-info">
-            <span class="float-cart-badge">🛒 <span id="float-cart-count">0</span> item di keranjang</span>
+            <span class="float-cart-badge" style="display:inline-flex; align-items:center; gap:6px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path></svg>
+                <span><span id="float-cart-count">0</span> item</span>
+            </span>
             <span class="float-cart-total" id="float-cart-total">Rp 0</span>
         </div>
-        <button type="button" class="btn-float-checkout">
-            Lihat Pesanan & Bayar ➔
+        <button type="button" class="btn-float-checkout" style="display:inline-flex; align-items:center; gap:6px;">
+            <span>Lihat Pesanan & Bayar</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
         </button>
     </div>
 
@@ -1333,7 +1363,7 @@ $waktu_sekarang = date('d/m/Y H:i:s') . ' WIB';
     <div class="modal-overlay" id="modal-struk">
         <div class="receipt-card">
             <div class="receipt-header">
-                <h3>🍗 FILLAH FOOD</h3>
+                <h3>FILLAH FOOD</h3>
                 <p><strong>SPESIALIS AYAM GEPREK & KULINER</strong><br>
                 Jl. Gumukmas, Jember - Jawa Timur<br>
                 WhatsApp: 0858-0982-7735</p>
@@ -1402,7 +1432,10 @@ $waktu_sekarang = date('d/m/Y H:i:s') . ' WIB';
             </div>
 
             <div class="modal-actions">
-                <button class="btn-print" onclick="window.print()">🖨️ Cetak Struk</button>
+                <button class="btn-print" onclick="window.print()" style="display:inline-flex; align-items:center; justify-content:center; gap:6px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect width="12" height="8" x="6" y="14"></rect></svg>
+                    <span>Cetak Struk</span>
+                </button>
                 <button class="btn-close-modal" onclick="tutupModalStruk()">Tutup & Pesanan Baru</button>
             </div>
         </div>

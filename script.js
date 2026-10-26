@@ -63,9 +63,11 @@ function renderKeranjang() {
     if (keranjang.length === 0) {
         container.innerHTML = `
             <div id="cart-empty-state" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
-                <div style="font-size: 36px; margin-bottom: 8px;">🛒</div>
-                <p style="font-size: 13px; font-weight: 600;">Keranjang belanja masih kosong</p>
-                <p style="font-size: 11px; margin-top: 4px;">Klik salah satu menu di sebelah kiri untuk menambahkan pesanan.</p>
+                <div style="display: flex; justify-content: center; margin-bottom: 12px; color: #cbd5e1;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path></svg>
+                </div>
+                <p style="font-size: 14px; font-weight: 700; color: #475569;">Keranjang Masih Kosong</p>
+                <p style="font-size: 12px; margin-top: 4px; color: #94a3b8;">Klik salah satu menu di sebelah kiri untuk menambahkan pesanan.</p>
             </div>
         `;
         totalBelanja = 0;
@@ -86,7 +88,9 @@ function renderKeranjang() {
                     <button type="button" class="step-btn" onclick="ubahQty(${item.id_menu}, -1)">-</button>
                     <span class="step-qty">${item.qty}</span>
                     <button type="button" class="step-btn" onclick="ubahQty(${item.id_menu}, 1)">+</button>
-                    <button type="button" style="background:none; border:none; color:#dc2626; cursor:pointer; font-size:14px; margin-left:4px;" onclick="hapusItem(${item.id_menu})" title="Hapus">🗑️</button>
+                    <button type="button" style="background:none; border:none; color:#dc2626; cursor:pointer; padding:4px; display:inline-flex; align-items:center; justify-content:center; margin-left:4px;" onclick="hapusItem(${item.id_menu})" title="Hapus dari pesanan">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                    </button>
                 </div>
             `;
             container.appendChild(row);
@@ -222,7 +226,7 @@ function prosesBayarDanCetak() {
         if (data.status === 'success') {
             bukaModalStruk(data);
         } else {
-            alert("⚠️ Transaksi Gagal:\n" + data.message);
+            alert("Transaksi Gagal:\n" + data.message);
         }
     })
     .catch(err => {

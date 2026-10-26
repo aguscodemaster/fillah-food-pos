@@ -142,7 +142,13 @@ $role     = isset($_SESSION['role']) ? htmlspecialchars($_SESSION['role']) : '-'
 <body>
 
     <div class="error-card">
-        <div class="error-icon">🛑</div>
+        <div class="error-icon" style="display: flex; align-items: center; justify-content: center; width: 64px; height: 64px; margin: 0 auto 16px; background: #fee2e2; color: #dc2626; border-radius: 50%;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+        </div>
         <h1 class="error-title">403 - Akses Ditolak!</h1>
         <p class="error-subtitle">
             Halaman yang Anda tuju dilindungi oleh kebijakan <strong>Role-Based Access Control (RBAC)</strong>. Peran akun Anda saat ini tidak memiliki izin untuk membuka halaman manajemen atau persediaan ini.
@@ -167,9 +173,15 @@ $role     = isset($_SESSION['role']) ? htmlspecialchars($_SESSION['role']) : '-'
 
         <div class="actions">
             <?php if ($role === 'Kasir' || $role === 'User'): ?>
-                <a href="kasir.php" class="btn btn-primary">🛒 Kembali ke Layar Kasir</a>
+                <a href="kasir.php" class="btn btn-primary" style="display:inline-flex; align-items:center; justify-content:center; gap:6px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"></circle><circle cx="19" cy="21" r="1"></circle><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"></path></svg>
+                    <span>Kembali ke Layar Kasir</span>
+                </a>
             <?php else: ?>
-                <a href="index.php" class="btn btn-primary">🏠 Ke Halaman Login</a>
+                <a href="index.php" class="btn btn-primary" style="display:inline-flex; align-items:center; justify-content:center; gap:6px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                    <span>Ke Halaman Login</span>
+                </a>
             <?php endif; ?>
             <a href="logout.php" class="btn btn-outline">Ganti Akun</a>
         </div>
