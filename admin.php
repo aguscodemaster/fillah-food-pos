@@ -623,18 +623,50 @@ if (is_owner()) {
     }
 }
 
-// 3. Ambil Data Metrik KPI
+// 3. Ambil Data Metrik KPI & Analytics Matrix Dashboard
 // Omzet Hari Ini
 $q_today = $conn->query("SELECT COALESCE(SUM(total_pembayaran), 0) AS omzet_today, COUNT(*) AS trx_today FROM transaksi WHERE DATE(tanggal_transaksi) = CURDATE()");
-$kpi_today = $q_today->fetch_assoc();
+$kpi_today = $q_today ? $q_today->fetch_assoc() : ['omzet_today' => 0, 'trx_today' => 0];
 
-// Total Seluruh Transaksi & Omzet Akumulasi
+// Omzet Bulan Berjalan
+$q_month = $conn->query("SELECT COALESCE(SUM(total_pembayaran), 0) AS omzet_month, COUNT(*) AS trx_month FROM transaksi WHERE DATE_FORMAT(tanggal_transaksi, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')");
+$kpi_month = $q_month ? $q_month->fetch_assoc() : ['omzet_month' => 0, 'trx_month' => 0];
+
+// Total Porsi Terjual Bulan Berjalan
+$q_porsi = $conn->query("SELECT COALESCE(SUM(dt.qty), 0) AS total_porsi FROM detail_transaksi dt JOIN transaksi t ON dt.id_transaksi = t.id WHERE DATE_FORMAT(t.tanggal_transaksi, '%Y-%m') = DATE_FORMAT(CURDATE(), '%Y-%m')");
+$total_porsi_bulan = $q_porsi ? $q_porsi->fetch_assoc()['total_porsi'] : 0;
+
+// Rata-rata Nilai per Transaksi (Average Order Value)
+$aov_today = ($kpi_today['trx_today'] > 0) ? ($kpi_today['omzet_today'] / $kpi_today['trx_today']) : 0;
+$aov_month = ($kpi_month['trx_month'] > 0) ? ($kpi_month['omzet_month'] / $kpi_month['trx_month']) : 0;
+
+// Total Seluruh Transaksi & Omzet Akumulasi Sejak Awal
 $q_all = $conn->query("SELECT COALESCE(SUM(total_pembayaran), 0) AS total_omzet, COUNT(*) AS total_trx FROM transaksi");
-$kpi_all = $q_all->fetch_assoc();
+$kpi_all = $q_all ? $q_all->fetch_assoc() : ['total_omzet' => 0, 'total_trx' => 0];
+
+// Top 5 Menu Produk Terlaris (Matrix Analytics)
+$top_produk_list = [];
+$q_top = $conn->query("SELECT p.id, p.nama_produk, p.kategori, p.harga, p.gambar, 
+                             COALESCE(SUM(dt.qty), 0) AS total_qty, 
+                             COALESCE(SUM(dt.subtotal), 0) AS total_nominal 
+                      FROM detail_transaksi dt 
+                      JOIN produk p ON dt.id_menu = p.id 
+                      GROUP BY dt.id_menu 
+                      ORDER BY total_qty DESC 
+                      LIMIT 5");
+$max_qty_top = 1;
+if ($q_top) {
+    while ($tp = $q_top->fetch_assoc()) {
+        $top_produk_list[] = $tp;
+        if ($tp['total_qty'] > $max_qty_top) {
+            $max_qty_top = $tp['total_qty'];
+        }
+    }
+}
 
 // Peringatan Stok Menipis (Stok <= Batas Minimum)
 $q_alert = $conn->query("SELECT COUNT(*) AS total_menipis FROM bahan_baku WHERE stok <= batas_minimum");
-$kpi_alert = $q_alert->fetch_assoc();
+$kpi_alert = $q_alert ? $q_alert->fetch_assoc() : ['total_menipis' => 0];
 
 // Ambil Seluruh Data Bahan Baku
 $bahan_baku_list = [];
@@ -644,6 +676,7 @@ if ($res_bahan) {
         $bahan_baku_list[] = $b;
     }
 }
+$total_bahan_count = count($bahan_baku_list);
 
 // Ambil Daftar Bahan Kritis / Menipis untuk Widget Dashboard
 $bahan_kritis_list = [];
@@ -691,9 +724,14 @@ if ($res_riwayat) {
     }
 }
 
-// Ambil Riwayat Transaksi Terbaru (Limit 10)
+// Ambil Riwayat Transaksi Terbaru dengan Rincian Porsi (Limit 8)
 $transaksi_terbaru = [];
-$res_trx = $conn->query("SELECT * FROM transaksi ORDER BY id DESC LIMIT 10");
+$res_trx = $conn->query("SELECT t.*, COUNT(dt.id) AS total_item, COALESCE(SUM(dt.qty), 0) AS total_qty 
+                         FROM transaksi t 
+                         LEFT JOIN detail_transaksi dt ON t.id = dt.id_transaksi 
+                         GROUP BY t.id 
+                         ORDER BY t.id DESC 
+                         LIMIT 8");
 if ($res_trx) {
     while ($t = $res_trx->fetch_assoc()) {
         $transaksi_terbaru[] = $t;
@@ -1105,57 +1143,204 @@ if (is_owner()) {
             gap: clamp(16px, 2.5vw, 28px);
         }
 
-        /* KPI Metric Cards */
+        /* Modern Executive KPI Matrix */
         .kpi-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: clamp(12px, 2vw, 18px);
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 16px;
         }
 
         .kpi-card {
-            background: var(--bg-card);
+            background: #ffffff;
             border: 1.5px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: clamp(14px, 2vw, 20px);
-            box-shadow: var(--shadow-sm);
+            border-radius: 12px;
+            padding: 18px 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
             position: relative;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: all 0.2s ease;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+            border-color: #cbd5e1;
+        }
+
+        .kpi-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
         }
 
         .kpi-title {
-            font-size: 11.5px;
+            font-size: 11px;
             font-weight: 700;
             color: var(--text-muted);
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.6px;
+        }
+
+        .kpi-icon-badge {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
         }
 
         .kpi-value {
-            font-size: clamp(20px, 3.5vw, 24px);
+            font-size: 23px;
             font-weight: 800;
             color: var(--text-dark);
-            margin: 6px 0 4px 0;
+            margin: 4px 0 6px 0;
+            letter-spacing: -0.5px;
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .kpi-desc {
-            font-size: 11.5px;
+            font-size: 12px;
             color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 500;
         }
 
         .kpi-card.alert-card {
-            border-color: #fde68a;
-            background: #fffbeb;
+            border-color: #fca5a5;
+            background: #fff5f5;
         }
 
         .kpi-card.alert-card .kpi-value {
-            color: var(--warning);
+            color: #dc2626;
         }
 
-        /* Layout 2 Kolom: Persediaan Stok & Riwayat */
+        /* Modern Quick Actions Toolbar */
+        .quick-action-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .quick-action-item {
+            background: #ffffff;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: var(--text-dark);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+            text-align: left;
+        }
+
+        .quick-action-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+            border-color: #94a3b8;
+        }
+
+        .quick-action-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .quick-action-content strong {
+            font-size: 12.5px;
+            font-weight: 700;
+            display: block;
+            line-height: 1.3;
+        }
+
+        .quick-action-content span {
+            font-size: 11px;
+            color: var(--text-muted);
+            display: block;
+            margin-top: 1px;
+        }
+
+        /* Top 5 Best-Seller Matrix List */
+        .top-seller-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .top-seller-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .top-seller-item:last-child {
+            border-bottom: none;
+        }
+
+        .rank-badge {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .rank-badge-1 { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+        .rank-badge-2 { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+        .rank-badge-3 { background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; }
+        .rank-badge-other { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
+
+        .progress-bar-bg {
+            height: 6px;
+            background: #f1f5f9;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            transition: width 0.3s ease;
+        }
+
+        /* Layout 2 Kolom Section Matrix */
         .section-grid {
             display: grid;
-            grid-template-columns: 1.4fr 1fr;
-            gap: clamp(16px, 2.5vw, 24px);
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            align-items: start;
+        }
+        @media (max-width: 900px) {
+            .section-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         .panel-card {
@@ -1925,170 +2110,353 @@ if (is_owner()) {
                 <div class="alert-box alert-danger"><?php echo ui_icon("alert", 16); ?> <?php echo htmlspecialchars($pesan_error); ?></div>
             <?php endif; ?>
 
-            <!-- TAB VIEW 1: DASHBOARD (Ringkasan Omzet, Stok Bahan & Transaksi) -->
+            <!-- TAB VIEW 1: DASHBOARD MATRIX (Ringkasan Eksekutif, Stok Bahan & Performa Bisnis) -->
             <div id="view-dashboard" class="tab-view" style="<?php echo ($tab_aktif === 'dashboard') ? '' : 'display: none;'; ?>">
 
-                <!-- KPI Cards -->
-                <div class="kpi-grid">
-                <div class="kpi-card">
-                    <div class="kpi-title">Omzet Penjualan Hari Ini</div>
-                    <div class="kpi-value" style="color: var(--primary);">
-                        Rp <?php echo number_format($kpi_today['omzet_today'], 0, ',', '.'); ?>
-                    </div>
-                    <div class="kpi-desc">Dari <?php echo $kpi_today['trx_today']; ?> transaksi kasir hari ini</div>
-                </div>
+                <?php
+                    // Helper nama hari & bulan bahasa Indonesia
+                    $hari_indo = ['Sunday' => 'Minggu', 'Monday' => 'Senin', 'Tuesday' => 'Selasa', 'Wednesday' => 'Rabu', 'Thursday' => 'Kamis', 'Friday' => 'Jumat', 'Saturday' => 'Sabtu'];
+                    $bulan_indo = [1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April', 5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'];
+                    $tgl_sekarang_indo = $hari_indo[date('l')] . ', ' . date('j') . ' ' . $bulan_indo[(int)date('n')] . ' ' . date('Y');
+                ?>
 
-                <div class="kpi-card">
-                    <div class="kpi-title">Total Pendapatan Akumulasi</div>
-                    <div class="kpi-value">
-                        Rp <?php echo number_format($kpi_all['total_omzet'], 0, ',', '.'); ?>
-                    </div>
-                    <div class="kpi-desc">Total <?php echo $kpi_all['total_trx']; ?> transaksi tercatat di database</div>
-                </div>
-
-                <div class="kpi-card <?php echo ($kpi_alert['total_menipis'] > 0) ? 'alert-card' : ''; ?>">
-                    <div class="kpi-title">Peringatan Bahan Menipis</div>
-                    <div class="kpi-value">
-                        <?php echo $kpi_alert['total_menipis']; ?> Bahan
-                    </div>
-                    <div class="kpi-desc">
-                        <?php echo ($kpi_alert['total_menipis'] > 0) ? 'Segera lakukan belanja bahan ke pasar!' : 'Semua persediaan bahan baku aman.'; ?>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 2 Kolom: Peringatan Stok Menipis & Riwayat Transaksi -->
-            <div class="section-grid">
-                
-                <!-- Kolom Kiri: Peringatan Persediaan Menipis & Pintasan -->
-                <div>
-                    <?php if (!empty($bahan_kritis_list)): ?>
-                        <div class="panel-card" style="border-left: 4px solid var(--accent); margin-bottom: 20px;">
-                            <div class="panel-header">
-                                <h2><span><?php echo ui_icon("alert", 20); ?></span> Peringatan Persediaan Menipis</h2>
-                                <button class="btn-primary-sm" onclick="pindahTab('stok', event)">Buka Stok Bahan &rarr;</button>
+                <!-- 1. Executive Welcome & Shift Bar -->
+                <div style="background: linear-gradient(135deg, #1e293b, #0f172a); color: #ffffff; border-radius: 12px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; box-shadow: 0 4px 16px rgba(15, 23, 42, 0.12); margin-bottom: 20px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(234, 88, 12, 0.2); border: 1.5px solid rgba(234, 88, 12, 0.4); display: flex; align-items: center; justify-content: center; color: #fb923c; flex-shrink: 0;">
+                            <?php echo ui_icon("utensils", 22); ?>
+                        </div>
+                        <div>
+                            <div style="font-weight: 800; font-size: 15px; letter-spacing: -0.3px; display: flex; align-items: center; gap: 8px;">
+                                <span>Operasional Fillah Food POS</span>
+                                <span style="font-size: 10.5px; background: #15803d; color: #dcfce7; padding: 2px 8px; border-radius: 20px; font-weight: 700; letter-spacing: 0.3px;">KASIR SIAP</span>
                             </div>
-                            <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 12px;">Bahan baku berikut telah mencapai atau di bawah batas aman minimum. Segera belanja pasokan.</p>
-                            <div class="table-responsive">
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th>Bahan Baku</th>
-                                            <th>Sisa Stok</th>
-                                            <th>Batas Min</th>
-                                            <th>Status</th>
-                                            <th style="text-align: right;">Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($bahan_kritis_list as $bk): ?>
+                            <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">
+                                <?php echo $tgl_sekarang_indo; ?> &bull; Masuk sebagai <strong><?php echo htmlspecialchars($_SESSION['nama_lengkap'] ?? 'Pemilik'); ?></strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <span style="font-size: 12px; background: rgba(255,255,255,0.08); padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12);">
+                            Akumulasi Bulan Ini: <strong style="color: #38bdf8;">Rp <?php echo number_format($kpi_month['omzet_month'], 0, ',', '.'); ?></strong> (<?php echo $kpi_month['trx_month']; ?> Trx)
+                        </span>
+                        <a href="kasir.php" class="btn-primary-sm" style="display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; font-size: 12px; font-weight: 700;">
+                            <?php echo ui_icon("cart", 14); ?> <span>Buka Kasir</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 2. The 4-Card Executive KPI Matrix -->
+                <div class="kpi-grid" style="margin-bottom: 20px;">
+                    <!-- KPI 1: Omzet Hari Ini -->
+                    <div class="kpi-card">
+                        <div class="kpi-card-header">
+                            <span class="kpi-title">Omzet Hari Ini</span>
+                            <div class="kpi-icon-badge" style="background: #fff7ed; color: #ea580c; border: 1px solid #ffedd5;">
+                                <?php echo ui_icon("receipt", 18); ?>
+                            </div>
+                        </div>
+                        <div class="kpi-value" style="color: #ea580c;">
+                            Rp <?php echo number_format($kpi_today['omzet_today'], 0, ',', '.'); ?>
+                        </div>
+                        <div class="kpi-desc">
+                            <span style="display:inline-block; width:7px; height:7px; border-radius:50%; background: <?php echo ($kpi_today['trx_today'] > 0) ? '#16a34a' : '#94a3b8'; ?>;"></span>
+                            <span><strong><?php echo $kpi_today['trx_today']; ?></strong> transaksi berhasil hari ini</span>
+                        </div>
+                    </div>
+
+                    <!-- KPI 2: Omzet Bulan Ini -->
+                    <div class="kpi-card">
+                        <div class="kpi-card-header">
+                            <span class="kpi-title">Omzet Bulan Ini</span>
+                            <div class="kpi-icon-badge" style="background: #f0f9ff; color: #0284c7; border: 1px solid #e0f2fe;">
+                                <?php echo ui_icon("sparkles", 18); ?>
+                            </div>
+                        </div>
+                        <div class="kpi-value" style="color: #0284c7;">
+                            Rp <?php echo number_format($kpi_month['omzet_month'], 0, ',', '.'); ?>
+                        </div>
+                        <div class="kpi-desc">
+                            <span><strong><?php echo $total_porsi_bulan; ?></strong> porsi terjual dari <strong><?php echo $kpi_month['trx_month']; ?></strong> nota</span>
+                        </div>
+                    </div>
+
+                    <!-- KPI 3: Menu Paling Laris -->
+                    <div class="kpi-card">
+                        <div class="kpi-card-header">
+                            <span class="kpi-title">Menu Terlaris</span>
+                            <div class="kpi-icon-badge" style="background: #f5f3ff; color: #7c3aed; border: 1px solid #ede9fe;">
+                                <?php echo ui_icon("crown", 18); ?>
+                            </div>
+                        </div>
+                        <div class="kpi-value" style="color: #7c3aed; font-size: 17px; line-height: 1.3;" title="<?php echo !empty($top_produk_list) ? htmlspecialchars($top_produk_list[0]['nama_produk']) : 'Belum Ada Penjualan'; ?>">
+                            <?php echo !empty($top_produk_list) ? htmlspecialchars($top_produk_list[0]['nama_produk']) : 'Belum Ada Penjualan'; ?>
+                        </div>
+                        <div class="kpi-desc">
+                            <?php if (!empty($top_produk_list)): ?>
+                                <span>Terjual <strong><?php echo $top_produk_list[0]['total_qty']; ?> porsi</strong> (Rp <?php echo number_format($top_produk_list[0]['total_nominal'], 0, ',', '.'); ?>)</span>
+                            <?php else: ?>
+                                <span>Menunggu transaksi kasir pertama</span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <!-- KPI 4: Kesehatan Persediaan -->
+                    <div class="kpi-card <?php echo ($kpi_alert['total_menipis'] > 0) ? 'alert-card' : ''; ?>">
+                        <div class="kpi-card-header">
+                            <span class="kpi-title">Kesehatan Persediaan</span>
+                            <div class="kpi-icon-badge" style="<?php echo ($kpi_alert['total_menipis'] > 0) ? 'background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;' : 'background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;'; ?>">
+                                <?php echo ($kpi_alert['total_menipis'] > 0) ? ui_icon("alert", 18) : ui_icon("check", 18); ?>
+                            </div>
+                        </div>
+                        <div class="kpi-value" style="<?php echo ($kpi_alert['total_menipis'] > 0) ? 'color: #dc2626;' : 'color: #16a34a;'; ?>">
+                            <?php echo ($kpi_alert['total_menipis'] > 0) ? $kpi_alert['total_menipis'] . ' Bahan Kritis' : '100% Stok Aman'; ?>
+                        </div>
+                        <div class="kpi-desc">
+                            <span><strong><?php echo $total_bahan_count - $kpi_alert['total_menipis']; ?></strong> dari <strong><?php echo $total_bahan_count; ?></strong> bahan di atas ambang aman</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Modern Quick Actions Toolbar -->
+                <div class="quick-action-grid">
+                    <a href="kasir.php" class="quick-action-item" style="border-color: #fdba74; background: linear-gradient(to right, #ffffff, #fff7ed);">
+                        <div class="quick-action-icon" style="background: #ea580c; color: #ffffff;">
+                            <?php echo ui_icon("cart", 18); ?>
+                        </div>
+                        <div class="quick-action-content">
+                            <strong style="color: #c2410c;">Layar Kasir POS</strong>
+                            <span>Input pesanan & cetak nota</span>
+                        </div>
+                    </a>
+
+                    <div class="quick-action-item" onclick="bukaModalStokMasuk()" style="border-color: #bbf7d0; background: linear-gradient(to right, #ffffff, #f0fdf4);">
+                        <div class="quick-action-icon" style="background: #16a34a; color: #ffffff;">
+                            <?php echo ui_icon("inbound", 18); ?>
+                        </div>
+                        <div class="quick-action-content">
+                            <strong style="color: #15803d;">Catat Stok Masuk</strong>
+                            <span>Kulakan belanja bahan dapur</span>
+                        </div>
+                    </div>
+
+                    <div class="quick-action-item" onclick="pindahTab('produk', event)" style="border-color: #bae6fd; background: linear-gradient(to right, #ffffff, #f0f9ff);">
+                        <div class="quick-action-icon" style="background: #0284c7; color: #ffffff;">
+                            <?php echo ui_icon("book", 18); ?>
+                        </div>
+                        <div class="quick-action-content">
+                            <strong style="color: #0369a1;">Katalog Menu & Resep</strong>
+                            <span>Formula bahan & harga jual</span>
+                        </div>
+                    </div>
+
+                    <a href="menu.php" target="_blank" class="quick-action-item" style="border-color: #f0abfc; background: linear-gradient(to right, #ffffff, #fdf4ff);">
+                        <div class="quick-action-icon" style="background: #9333ea; color: #ffffff;">
+                            <?php echo ui_icon("phone", 18); ?>
+                        </div>
+                        <div class="quick-action-content">
+                            <strong style="color: #7e22ce;">E-Menu Pelanggan</strong>
+                            <span>Buka menu digital via QR</span>
+                        </div>
+                    </a>
+                </div>
+
+                <!-- 4. Executive Analytics Matrix (2 Kolom Seimbang) -->
+                <div class="section-grid">
+                    
+                    <!-- Kolom Kiri: Status Stok Dapur & Log Mutasi -->
+                    <div style="display: flex; flex-direction: column; gap: 20px;">
+                        
+                        <!-- Panel Stok Dapur -->
+                        <?php if (!empty($bahan_kritis_list)): ?>
+                            <div class="panel-card" style="border-left: 4px solid #dc2626;">
+                                <div class="panel-header">
+                                    <div>
+                                        <h2><span><?php echo ui_icon("alert", 20); ?></span> Peringatan Bahan Menipis / Kritis</h2>
+                                        <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Segera belanja bahan di bawah ambang minimum berikut</p>
+                                    </div>
+                                    <button class="btn-primary-sm" onclick="pindahTab('stok', event)">Buka Stok &rarr;</button>
+                                </div>
+                                <div class="table-responsive">
+                                    <table>
+                                        <thead>
                                             <tr>
-                                                <td><strong><?php echo htmlspecialchars($bk['nama_bahan']); ?></strong></td>
-                                                <td style="color: var(--accent); font-weight: 800;">
-                                                    <?php echo rtrim(rtrim(number_format($bk['stok'], 2, '.', ''), '0'), '.'); ?> <?php echo htmlspecialchars($bk['satuan']); ?>
+                                                <th>Bahan Baku</th>
+                                                <th>Sisa Stok</th>
+                                                <th>Batas Min</th>
+                                                <th>Status</th>
+                                                <th style="text-align: right;">Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($bahan_kritis_list as $bk): ?>
+                                                <tr>
+                                                    <td><strong><?php echo htmlspecialchars($bk['nama_bahan']); ?></strong></td>
+                                                    <td style="color: #dc2626; font-weight: 800;">
+                                                        <?php echo rtrim(rtrim(number_format($bk['stok'], 2, '.', ''), '0'), '.'); ?> <?php echo htmlspecialchars($bk['satuan']); ?>
+                                                    </td>
+                                                    <td style="color: var(--text-muted);">
+                                                        <?php echo rtrim(rtrim(number_format($bk['batas_minimum'], 2, '.', ''), '0'), '.'); ?> <?php echo htmlspecialchars($bk['satuan']); ?>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge <?php echo ($bk['stok'] <= 0) ? 'badge-danger' : 'badge-warning'; ?>">
+                                                            <?php echo ($bk['stok'] <= 0) ? 'Habis' : 'Menipis'; ?>
+                                                        </span>
+                                                    </td>
+                                                    <td style="text-align: right; white-space: nowrap;">
+                                                        <button class="btn-table-action btn-inbound" onclick="isiStokCepat(<?php echo $bk['id']; ?>, '<?php echo addslashes($bk['nama_bahan']); ?>', '<?php echo $bk['satuan']; ?>')" title="Catat Kulakan Stok Masuk">
+                                                            <?php echo ui_icon("plus", 12); ?> Belanja
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        <?php else: ?>
+                            <div class="panel-card" style="border-left: 4px solid #16a34a;">
+                                <div class="panel-header">
+                                    <div>
+                                        <h2><span><?php echo ui_icon("box", 20); ?></span> Status Persediaan Bahan Baku</h2>
+                                        <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Monitoring ketersediaan fisik bahan baku dapur</p>
+                                    </div>
+                                    <button class="btn-primary-sm" onclick="pindahTab('stok', event)">Kelola Bahan &rarr;</button>
+                                </div>
+                                <div style="padding: 14px 16px; background: #f0fdf4; border-radius: 10px; border: 1.5px solid #bbf7d0; display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                                    <span style="display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; background:#dcfce7; color:#16a34a; flex-shrink:0;">
+                                        <?php echo ui_icon("check", 20); ?>
+                                    </span>
+                                    <div>
+                                        <strong style="color: #15803d; font-size: 13.5px;">Semua Bahan Baku Aman (100%)</strong>
+                                        <p style="font-size: 12px; color: #166534; margin: 2px 0 0 0;">Total <?php echo $total_bahan_count; ?> jenis bahan baku tersedia di atas ambang batas minimum.</p>
+                                    </div>
+                                </div>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px;">
+                                    <?php 
+                                        $preview_bahan = array_slice($bahan_baku_list, 0, 6);
+                                        foreach ($preview_bahan as $pb): 
+                                    ?>
+                                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; font-size: 11.5px;">
+                                            <div style="font-weight: 700; color: var(--text-dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<?php echo htmlspecialchars($pb['nama_bahan']); ?>">
+                                                <?php echo htmlspecialchars($pb['nama_bahan']); ?>
+                                            </div>
+                                            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 4px;">
+                                                <span style="font-weight: 800; color: #15803d;">
+                                                    <?php echo rtrim(rtrim(number_format($pb['stok'], 2, '.', ''), '0'), '.'); ?> <?php echo htmlspecialchars($pb['satuan']); ?>
+                                                </span>
+                                                <span style="font-size: 9.5px; color: #16a34a; background: #dcfce7; padding: 1px 5px; border-radius: 4px; font-weight: 700;">Aman</span>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+
+                        <!-- Panel Menu Produk Terlaris & Kontribusi -->
+                        <div class="panel-card">
+                            <div class="panel-header">
+                                <div>
+                                    <h2><span><?php echo ui_icon("sparkles", 20); ?></span> 5 Menu Terlaris (Kontribusi Omzet)</h2>
+                                    <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Menu paling digemari pelanggan berdasarkan total porsi terjual</p>
+                                </div>
+                                <button class="btn-primary-sm" onclick="pindahTab('produk', event)">Lihat Katalog &rarr;</button>
+                            </div>
+                            
+                            <?php if (empty($top_produk_list)): ?>
+                                <div style="text-align: center; color: var(--text-muted); padding: 24px; font-size: 12.5px;">
+                                    Belum ada transaksi menu yang tercatat di sistem.
+                                </div>
+                            <?php else: ?>
+                                <div class="top-seller-list">
+                                    <?php foreach ($top_produk_list as $idx => $tp): 
+                                        $rank = $idx + 1;
+                                        $rank_class = ($rank === 1) ? 'rank-badge-1' : (($rank === 2) ? 'rank-badge-2' : (($rank === 3) ? 'rank-badge-3' : 'rank-badge-other'));
+                                        $pct = ($max_qty_top > 0) ? round(($tp['total_qty'] / $max_qty_top) * 100) : 0;
+                                    ?>
+                                        <div class="top-seller-item">
+                                            <span class="rank-badge <?php echo $rank_class; ?>">#<?php echo $rank; ?></span>
+                                            <div style="flex: 1; min-width: 0;">
+                                                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                                                    <span style="font-weight: 700; font-size: 13px; color: var(--text-dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="<?php echo htmlspecialchars($tp['nama_produk']); ?>">
+                                                        <?php echo htmlspecialchars($tp['nama_produk']); ?>
+                                                    </span>
+                                                    <span style="font-weight: 800; font-size: 12.5px; color: var(--primary); white-space: nowrap;">
+                                                        Rp <?php echo number_format($tp['total_nominal'], 0, ',', '.'); ?>
+                                                    </span>
+                                                </div>
+                                                <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+                                                    <span>Kategori: <?php echo htmlspecialchars($tp['kategori']); ?></span>
+                                                    <span><strong><?php echo $tp['total_qty']; ?></strong> porsi terjual</span>
+                                                </div>
+                                                <div class="progress-bar-bg">
+                                                    <div class="progress-bar-fill" style="width: <?php echo $pct; ?>%;"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+
+                    </div>
+
+                    <!-- Kolom Kanan: Live Feed Transaksi Kasir Terakhir -->
+                    <div class="panel-card" id="riwayat-transaksi">
+                        <div class="panel-header">
+                            <div>
+                                <h2><span><?php echo ui_icon("receipt", 20); ?></span> Transaksi Kasir Terakhir</h2>
+                                <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Aktivitas penjualan kasir POS yang berhasil diproses</p>
+                            </div>
+                            <a href="kasir.php" class="btn-primary-sm" style="display: inline-flex; align-items: center; gap: 6px;">
+                                <?php echo ui_icon("plus", 12); ?> Transaksi Baru
+                            </a>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>No. Nota</th>
+                                        <th>Waktu</th>
+                                        <th>Porsi</th>
+                                        <th style="text-align: right;">Total Tagihan</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if (empty($transaksi_terbaru)): ?>
+                                        <tr>
+                                            <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 24px;">
+                                                Belum ada transaksi penjualan kasir yang tercatat.
+                                            </td>
+                                        </tr>
+                                    <?php else: ?>
+                                        <?php foreach ($transaksi_terbaru as $trx): ?>
+                                            <tr>
+                                                <td>
+                                                    <strong style="color: #0369a1;">#TRX-<?php echo str_pad($trx['id'], 4, "0", STR_PAD_LEFT); ?></strong>
                                                 </td>
-                                                <td style="color: var(--text-muted);">
-                                                    <?php echo rtrim(rtrim(number_format($bk['batas_minimum'], 2, '.', ''), '0'), '.'); ?> <?php echo htmlspecialchars($bk['satuan']); ?>
+                                                <td style="font-size: 11.5px; color: var(--text-muted);">
+                                                    <?php echo date('d/m/Y H:i', strtotime($trx['tanggal_transaksi'])); ?>
                                                 </td>
                                                 <td>
-                                                    <span class="badge <?php echo ($bk['stok'] <= 0) ? 'badge-danger' : 'badge-warning'; ?>">
-                                                        <?php echo ($bk['stok'] <= 0) ? 'Habis / Kritis' : 'Menipis'; ?>
+                                                    <span class="badge" style="background: #f1f5f9; color: var(--text-dark); border: 1px solid #e2e8f0; font-size: 11px;">
+                                                        <?php echo $trx['total_qty']; ?> Porsi
                                                     </span>
                                                 </td>
-                                                <td style="text-align: right; white-space: nowrap;">
-                                                    <button class="btn-table-action btn-inbound" onclick="isiStokCepat(<?php echo $bk['id']; ?>, '<?php echo addslashes($bk['nama_bahan']); ?>', '<?php echo $bk['satuan']; ?>')" title="Catat Kulakan Stok Masuk">
-                                                        <?php echo ui_icon("plus", 12); ?> Belanja
-                                                    </button>
+                                                <td style="font-weight: 800; color: var(--primary); text-align: right;">
+                                                    Rp <?php echo number_format($trx['total_pembayaran'], 0, ',', '.'); ?>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    <?php else: ?>
-                        <div class="panel-card" style="border-left: 4px solid #16a34a; margin-bottom: 20px;">
-                            <div class="panel-header">
-                                <h2><span><?php echo ui_icon("box", 20); ?></span> Status Persediaan Dapur</h2>
-                                <button class="btn-primary-sm" onclick="pindahTab('stok', event)">Kelola Bahan Baku &rarr;</button>
-                            </div>
-                            <div style="padding: 16px; background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0; display: flex; align-items: center; gap: 12px;">
-                                <span style="display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:50%; background:#dcfce7; color:#16a34a;"><?php echo ui_icon("check", 22); ?></span>
-                                <div>
-                                    <strong style="color: #15803d; font-size: 14px;">Semua Bahan Baku Aman</strong>
-                                    <p style="font-size: 12.5px; color: #166534; margin: 2px 0 0 0;">Total <?php echo count($bahan_baku_list); ?> jenis bahan baku tersedia di atas ambang batas minimum.</p>
-                                </div>
-                            </div>
-                        </div>
-                    <?php endif; ?>
-
-                    <!-- Pintasan Cepat Sistem -->
-                    <div class="panel-card">
-                        <div class="panel-header">
-                            <h2><span><?php echo ui_icon("zap", 20); ?></span> Pintasan Cepat</h2>
-                        </div>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px;">
-                            <button type="button" onclick="pindahTab('produk', event)" style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:14px; text-align:center; cursor:pointer; font-weight:700; font-size:12px; display:flex; flex-direction:column; align-items:center; gap:6px;">
-                                <span><?php echo ui_icon("book", 22); ?></span> Kelola Menu & Resep
-                            </button>
-                            <button type="button" onclick="bukaModalStokMasuk()" style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:14px; text-align:center; cursor:pointer; font-weight:700; font-size:12px; color:#15803d; display:flex; flex-direction:column; align-items:center; gap:6px;">
-                                <span><?php echo ui_icon("inbound", 22); ?></span> Catat Stok Masuk
-                            </button>
-                            <a href="kasir.php" style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:10px; padding:14px; text-align:center; text-decoration:none; font-weight:700; font-size:12px; color:#0369a1; display:flex; flex-direction:column; align-items:center; gap:6px;">
-                                <span><?php echo ui_icon("cart", 22); ?></span> Layar Kasir POS
-                            </a>
-                            <a href="menu.php" target="_blank" style="background:#fdf4ff; border:1px solid #f0abfc; border-radius:10px; padding:14px; text-align:center; text-decoration:none; font-weight:700; font-size:12px; color:#a21caf; display:flex; flex-direction:column; align-items:center; gap:6px;">
-                                <span><?php echo ui_icon("phone", 22); ?></span> E-Menu Pelanggan
-                            </a>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
-                </div>
 
-                <!-- Kolom Kanan: Riwayat Transaksi Kasir -->
-                <div class="panel-card" id="riwayat-transaksi">
-                    <div class="panel-header">
-                        <h2><span><?php echo ui_icon("receipt", 20); ?></span> Transaksi Kasir Terakhir</h2>
-                        <span style="font-size: 11px; color: var(--text-muted);">10 Transaksi Terakhir</span>
-                    </div>
-
-                    <div class="table-responsive">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>No. Nota</th>
-                                    <th>Waktu</th>
-                                    <th style="text-align: right;">Total Tagihan</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (empty($transaksi_terbaru)): ?>
-                                    <tr>
-                                        <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 20px;">
-                                            Belum ada transaksi penjualan yang tercatat.
-                                        </td>
-                                    </tr>
-                                <?php else: ?>
-                                    <?php foreach ($transaksi_terbaru as $trx): ?>
-                                        <tr>
-                                            <td>
-                                                <strong>#TRX-<?php echo str_pad($trx['id'], 4, "0", STR_PAD_LEFT); ?></strong>
-                                            </td>
-                                            <td style="font-size: 11.5px; color: var(--text-muted);">
-                                                <?php echo date('d/m/Y H:i', strtotime($trx['tanggal_transaksi'])); ?>
-                                            </td>
-                                            <td style="font-weight: 800; color: var(--primary); text-align: right;">
-                                                Rp <?php echo number_format($trx['total_pembayaran'], 0, ',', '.'); ?>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-            </div> <!-- /section-grid -->
-        </div> <!-- /view-dashboard -->
+                </div> <!-- /section-grid -->
+            </div> <!-- /view-dashboard -->
 
         <!-- TAB VIEW 2: MENU PRODUK & RESEP -->
         <div id="view-produk" class="tab-view" style="<?php echo ($tab_aktif === 'produk') ? '' : 'display: none;'; ?>">
