@@ -1061,9 +1061,14 @@ if (is_owner()) {
             -webkit-overflow-scrolling: touch;
         }
 
-        /* Top Header */
+        /* Top Header (Fixed Sticky Top) */
         .topbar {
-            background: #ffffff;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             border-bottom: 1.5px solid var(--border);
             padding: clamp(12px, 2vw, 16px) clamp(16px, 3vw, 32px);
             display: flex;
@@ -1071,7 +1076,7 @@ if (is_owner()) {
             align-items: center;
             flex-shrink: 0;
             gap: 12px;
-            box-shadow: var(--shadow-sm);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
         }
 
         .topbar-left {
