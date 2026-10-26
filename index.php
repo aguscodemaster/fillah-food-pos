@@ -16,14 +16,19 @@ if (isset($_SESSION['username'])) {
 $error = "";
 
 if (isset($_POST['login'])) {
-    $username = trim($_POST['username']);
+    $username_raw = trim($_POST['username']);
+    $username_clean = strtolower($username_raw);
     $password = trim($_POST['password']);
 
-    // Alias kemudahan jika mengetik nama anggota tim
-    if ($username === 'admin_nihayatus') {
+    // Alias fleksibel: mendukung nama peran (owner/admin/kasir), nama personel, atau username teknis
+    if (in_array($username_clean, ['owner', 'pemilik', 'owner_nihayatus', 'admin_nihayatus', 'nihayatus', 'sofiyah', 'ibu_sofiyah'])) {
         $username = 'owner_nihayatus';
-    } elseif (in_array(strtolower($username), ['aisyah', 'aisya', 'aisyah_marta'])) {
+    } elseif (in_array($username_clean, ['admin', 'admin_persediaan', 'gudang', 'persediaan', 'staf_persediaan', 'admin_gudang'])) {
+        $username = 'admin_persediaan';
+    } elseif (in_array($username_clean, ['kasir', 'kasir_1', 'kasir1', 'aisyah', 'aisya', 'aisyah_marta', 'aisyah_dewi'])) {
         $username = 'kasir_1';
+    } else {
+        $username = $username_raw;
     }
 
     // Menggunakan Prepared Statement untuk keamanan dari SQL Injection
@@ -292,8 +297,9 @@ if (isset($_POST['login'])) {
 
             <div class="form-group">
                 <label class="form-label" for="password">Kata Sandi (Password)</label>
-                <div class="input-wrapper">
-                    <input type="password" id="password" name="password" class="form-input" placeholder="Masukkan password" required>
+                <div class="input-wrapper" style="position: relative;">
+                    <input type="password" id="password" name="password" class="form-input" placeholder="Masukkan password" required style="padding-right: 42px;">
+                    <button type="button" onclick="togglePassword()" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 16px; color: var(--text-muted); padding: 0;" title="Lihat/Sembunyikan Password" id="toggleBtn">👁️</button>
                 </div>
             </div>
 
@@ -329,6 +335,20 @@ if (isset($_POST['login'])) {
         function fillLogin(user, pass) {
             document.getElementById('username').value = user;
             document.getElementById('password').value = pass;
+            var err = document.querySelector('.error-alert');
+            if (err) err.style.display = 'none';
+        }
+
+        function togglePassword() {
+            var pwd = document.getElementById('password');
+            var btn = document.getElementById('toggleBtn');
+            if (pwd.type === 'password') {
+                pwd.type = 'text';
+                btn.textContent = '🙈';
+            } else {
+                pwd.type = 'password';
+                btn.textContent = '👁️';
+            }
         }
     </script>
 </body>
