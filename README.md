@@ -50,11 +50,14 @@ Aplikasi web responsif yang mengintegrasikan transaksi kasir (Point of Sale) den
    ```
 
 ### 🔑 Akun Login Bawaan (Default):
-* **Admin (Pemilik):**
-  * Username: `admin_nihayatus`
+* **Owner (Pemilik - Hak Akses Penuh & Laporan):**
+  * Username: `owner_nihayatus`
   * Password: `12345`
-* **Kasir:**
-  * Username: `kasir_1`
+* **Admin (Staf Gudang & Persediaan):**
+  * Username: `admin_persediaan`
+  * Password: `12345`
+* **Kasir (Aisyah Marta Dewi - Transaksi POS):**
+  * Username: `kasir_1` *(atau ketik `aisyah`)*
   * Password: `12345`
 
 ---

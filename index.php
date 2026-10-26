@@ -19,9 +19,11 @@ if (isset($_POST['login'])) {
     $username = trim($_POST['username']);
     $password = trim($_POST['password']);
 
-    // Alias legacy jika username admin_nihayatus tersimpan di autofill browser
+    // Alias kemudahan jika mengetik nama anggota tim
     if ($username === 'admin_nihayatus') {
         $username = 'owner_nihayatus';
+    } elseif (in_array(strtolower($username), ['aisyah', 'aisya', 'aisyah_marta'])) {
+        $username = 'kasir_1';
     }
 
     // Menggunakan Prepared Statement untuk keamanan dari SQL Injection
@@ -304,15 +306,15 @@ if (isset($_POST['login'])) {
         <div class="demo-box">
             <div style="font-weight: 700; margin-bottom: 4px;">🔑 Pilihan Akun Demo (Klik untuk Autofill):</div>
             <div class="demo-row" onclick="fillLogin('owner_nihayatus', '12345')">
-                <span>👑 <strong>Owner:</strong> owner_nihayatus</span>
+                <span>👑 <strong>Owner:</strong> owner_nihayatus (Ibu Sofiyah)</span>
                 <span>Pass: 12345</span>
             </div>
             <div class="demo-row" onclick="fillLogin('admin_persediaan', '12345')">
-                <span>⚙️ <strong>Admin:</strong> admin_persediaan</span>
+                <span>⚙️ <strong>Admin:</strong> admin_persediaan (Gudang)</span>
                 <span>Pass: 12345</span>
             </div>
             <div class="demo-row" onclick="fillLogin('kasir_1', '12345')">
-                <span>🛒 <strong>Kasir:</strong> kasir_1</span>
+                <span>🛒 <strong>Kasir:</strong> kasir_1 / aisyah (Aisyah)</span>
                 <span>Pass: 12345</span>
             </div>
         </div>
