@@ -1207,18 +1207,21 @@ if (is_owner()) {
             background: #f8fafc;
             color: var(--text-muted);
             font-weight: 700;
-            padding: 10px 12px;
+            padding: 12px 14px;
             border-bottom: 1.5px solid var(--border);
             font-size: 11px;
             text-transform: uppercase;
             white-space: nowrap;
+            vertical-align: middle;
+            letter-spacing: 0.5px;
         }
 
         td {
-            padding: 10px 12px;
+            padding: 12px 14px;
             border-bottom: 1px solid var(--border);
             color: var(--text-dark);
             white-space: nowrap;
+            vertical-align: middle;
         }
 
         tr:last-child td {
@@ -1476,15 +1479,21 @@ if (is_owner()) {
         .btn-table-action {
             display: inline-flex;
             align-items: center;
-            gap: 4px;
-            padding: 5px 9px;
+            justify-content: center;
+            gap: 5px;
+            padding: 5px 10px;
             font-size: 11.5px;
             font-weight: 600;
             border-radius: 6px;
             border: 1px solid #cbd5e1;
             background: #ffffff;
+            color: #334155;
             cursor: pointer;
-            transition: all 0.15s;
+            transition: all 0.15s ease;
+            height: 28px;
+            line-height: 1;
+            white-space: nowrap;
+            box-sizing: border-box;
         }
         .btn-table-action:hover {
             background: #f8fafc;
@@ -1497,6 +1506,25 @@ if (is_owner()) {
         }
         .btn-table-action.btn-resep:hover {
             background: #dbeafe;
+            border-color: #93c5fd;
+        }
+        .btn-table-action.btn-inbound {
+            color: #15803d;
+            border-color: #bbf7d0;
+            background: #f0fdf4;
+        }
+        .btn-table-action.btn-inbound:hover {
+            background: #dcfce7;
+            border-color: #86efac;
+        }
+        .btn-table-action.btn-outbound {
+            color: #b91c1c;
+            border-color: #fecaca;
+            background: #fef2f2;
+        }
+        .btn-table-action.btn-outbound:hover {
+            background: #fee2e2;
+            border-color: #fca5a5;
         }
         .btn-table-action.btn-danger-sm {
             background: #fef2f2;
@@ -1505,6 +1533,7 @@ if (is_owner()) {
         }
         .btn-table-action.btn-danger-sm:hover {
             background: #fee2e2;
+            border-color: #fca5a5;
         }
 
         /* ==========================================================================
@@ -1933,7 +1962,7 @@ if (is_owner()) {
                                             <th>Sisa Stok</th>
                                             <th>Batas Min</th>
                                             <th>Status</th>
-                                            <th>Aksi</th>
+                                            <th style="text-align: right;">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -1951,9 +1980,9 @@ if (is_owner()) {
                                                         <?php echo ($bk['stok'] <= 0) ? 'Habis / Kritis' : 'Menipis'; ?>
                                                     </span>
                                                 </td>
-                                                <td>
-                                                    <button class="btn-table-action" onclick="isiStokCepat(<?php echo $bk['id']; ?>, '<?php echo addslashes($bk['nama_bahan']); ?>', '<?php echo $bk['satuan']; ?>')">
-                                                        + Belanja
+                                                <td style="text-align: right; white-space: nowrap;">
+                                                    <button class="btn-table-action btn-inbound" onclick="isiStokCepat(<?php echo $bk['id']; ?>, '<?php echo addslashes($bk['nama_bahan']); ?>', '<?php echo $bk['satuan']; ?>')" title="Catat Kulakan Stok Masuk">
+                                                        <?php echo ui_icon("plus", 12); ?> Belanja
                                                     </button>
                                                 </td>
                                             </tr>
@@ -2013,7 +2042,7 @@ if (is_owner()) {
                                 <tr>
                                     <th>No. Nota</th>
                                     <th>Waktu</th>
-                                    <th>Total Tagihan</th>
+                                    <th style="text-align: right;">Total Tagihan</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -2032,7 +2061,7 @@ if (is_owner()) {
                                             <td style="font-size: 11.5px; color: var(--text-muted);">
                                                 <?php echo date('d/m/Y H:i', strtotime($trx['tanggal_transaksi'])); ?>
                                             </td>
-                                            <td style="font-weight: 800; color: var(--primary);">
+                                            <td style="font-weight: 800; color: var(--primary); text-align: right;">
                                                 Rp <?php echo number_format($trx['total_pembayaran'], 0, ',', '.'); ?>
                                             </td>
                                         </tr>
@@ -2054,7 +2083,7 @@ if (is_owner()) {
                         <h2><span><?php echo ui_icon("book", 20); ?></span> Katalog Menu Makanan & Minuman</h2>
                         <span style="font-size: 12px; color: var(--text-muted);">Kelola harga jual, foto produk, dan formula resep bahan baku</span>
                     </div>
-                    <button class="btn-primary-sm" onclick="bukaModalProdukBaru()">+ Tambah Menu Baru</button>
+                    <button class="btn-primary-sm" onclick="bukaModalProdukBaru()" style="display:inline-flex; align-items:center; gap:6px;"><?php echo ui_icon("plus", 14); ?> <span>Tambah Menu Baru</span></button>
                 </div>
 
                 <div class="filter-bar">
@@ -2129,18 +2158,20 @@ if (is_owner()) {
                                             <?php endif; ?>
                                         </td>
                                         <td style="text-align: right; white-space: nowrap;">
-                                            <button type="button" class="btn-table-action btn-resep" onclick="bukaModalAturResep(<?php echo $p['id']; ?>, '<?php echo addslashes($p['nama_produk']); ?>')">
-                                                <?php echo ui_icon("settings", 13); ?> Atur Resep
-                                            </button>
-                                            <button type="button" class="btn-table-action" onclick="bukaModalEditProduk(<?php echo htmlspecialchars(json_encode($p)); ?>)">
-                                                <?php echo ui_icon("edit", 13); ?> Edit
-                                            </button>
-                                            <form method="POST" action="" style="display: inline;" onsubmit="return confirm('Apakah Anda yakin ingin menghapus menu \'<?php echo addslashes($p['nama_produk']); ?>\'?');">
-                                                <input type="hidden" name="id_produk" value="<?php echo $p['id']; ?>">
-                                                <button type="submit" name="hapus_produk" class="btn-table-action btn-danger-sm" title="Hapus Menu">
-                                                    
+                                            <div style="display: inline-flex; align-items: center; gap: 5px; justify-content: flex-end;">
+                                                <button type="button" class="btn-table-action btn-resep" onclick="bukaModalAturResep(<?php echo $p['id']; ?>, '<?php echo addslashes($p['nama_produk']); ?>')" title="Formula Resep Bahan">
+                                                    <?php echo ui_icon("settings", 12); ?> Atur Resep
                                                 </button>
-                                            </form>
+                                                <button type="button" class="btn-table-action" onclick="bukaModalEditProduk(<?php echo htmlspecialchars(json_encode($p)); ?>)" title="Ubah Data Menu">
+                                                    <?php echo ui_icon("edit", 12); ?> Edit
+                                                </button>
+                                                <form method="POST" action="" style="display: inline-flex; margin: 0;" onsubmit="return confirm('Apakah Anda yakin ingin menghapus menu \'<?php echo addslashes($p['nama_produk']); ?>\'?');">
+                                                    <input type="hidden" name="id_produk" value="<?php echo $p['id']; ?>">
+                                                    <button type="submit" name="hapus_produk" class="btn-table-action btn-danger-sm" title="Hapus Menu">
+                                                        <?php echo ui_icon("trash", 12); ?> Hapus
+                                                    </button>
+                                                </form>
+                                            </div>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -2159,10 +2190,16 @@ if (is_owner()) {
                         <h2><span><?php echo ui_icon("box", 20); ?></span> Persediaan Bahan Baku (Gudang & Dapur)</h2>
                         <span style="font-size: 12px; color: var(--text-muted);">Pantau saldo fisik bahan, catat kulakan masuk, dan bahan rusak/basi</span>
                     </div>
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <button class="btn-primary-sm" style="background: #16a34a; display:inline-flex; align-items:center; gap:6px;" onclick="bukaModalStokMasuk()"><?php echo ui_icon("inbound", 15); ?> <span>+ Stok Masuk</span></button>
-                        <button class="btn-primary-sm" style="background: #dc2626; display:inline-flex; align-items:center; gap:6px;" onclick="bukaModalStokKeluar()"><?php echo ui_icon("outbound", 15); ?> <span>- Catat Rusak / Basi</span></button>
-                        <button class="btn-primary-sm" style="background: #475569;" onclick="bukaModalBahanBaru()">+ Bahan Baru</button>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                        <button class="btn-primary-sm" style="background: #16a34a; display:inline-flex; align-items:center; gap:6px;" onclick="bukaModalStokMasuk()">
+                            <?php echo ui_icon("inbound", 14); ?> <span>Catat Stok Masuk</span>
+                        </button>
+                        <button class="btn-primary-sm" style="background: #dc2626; display:inline-flex; align-items:center; gap:6px;" onclick="bukaModalStokKeluar()">
+                            <?php echo ui_icon("outbound", 14); ?> <span>Catat Rusak / Basi</span>
+                        </button>
+                        <button class="btn-primary-sm" style="background: #334155; display:inline-flex; align-items:center; gap:6px;" onclick="bukaModalBahanBaru()">
+                            <?php echo ui_icon("plus", 14); ?> <span>Tambah Bahan Baru</span>
+                        </button>
                     </div>
                 </div>
 
@@ -2231,21 +2268,23 @@ if (is_owner()) {
                                         <span class="badge <?php echo $badge_class; ?>"><?php echo $badge_label; ?></span>
                                     </td>
                                     <td style="text-align: right; white-space: nowrap;">
-                                        <button type="button" class="btn-table-action" style="color: #16a34a; border-color: #bbf7d0; background: #f0fdf4;" onclick="isiStokCepat(<?php echo $b['id']; ?>, '<?php echo addslashes($b['nama_bahan']); ?>', '<?php echo $b['satuan']; ?>')" title="Tambah Stok Masuk">
-                                            + Masuk
-                                        </button>
-                                        <button type="button" class="btn-table-action" style="color: #dc2626; border-color: #fecaca; background: #fef2f2;" onclick="catatKeluarCepat(<?php echo $b['id']; ?>, '<?php echo addslashes($b['nama_bahan']); ?>', '<?php echo $b['satuan']; ?>')" title="Catat Stok Rusak">
-                                            - Rusak
-                                        </button>
-                                        <button type="button" class="btn-table-action" onclick="bukaModalEditBahan(<?php echo htmlspecialchars(json_encode($b)); ?>)">
-                                            <?php echo ui_icon("edit", 13); ?> Edit
-                                        </button>
-                                        <form method="POST" action="" style="display: inline;" onsubmit="return confirm('Hapus bahan baku \'<?php echo addslashes($b['nama_bahan']); ?>\'? Formula resep yang menggunakannya juga akan terhapus.');">
-                                            <input type="hidden" name="id_bahan" value="<?php echo $b['id']; ?>">
-                                            <button type="submit" name="hapus_bahan" class="btn-table-action btn-danger-sm" title="Hapus Bahan">
-                                                
+                                        <div style="display: inline-flex; align-items: center; gap: 5px; justify-content: flex-end;">
+                                            <button type="button" class="btn-table-action btn-inbound" onclick="isiStokCepat(<?php echo $b['id']; ?>, '<?php echo addslashes($b['nama_bahan']); ?>', '<?php echo $b['satuan']; ?>')" title="Catat Kulakan Stok Masuk">
+                                                <?php echo ui_icon("plus", 12); ?> Masuk
                                             </button>
-                                        </form>
+                                            <button type="button" class="btn-table-action btn-outbound" onclick="catatKeluarCepat(<?php echo $b['id']; ?>, '<?php echo addslashes($b['nama_bahan']); ?>', '<?php echo $b['satuan']; ?>')" title="Catat Bahan Rusak atau Basi">
+                                                <?php echo ui_icon("outbound", 12); ?> Rusak
+                                            </button>
+                                            <button type="button" class="btn-table-action" onclick="bukaModalEditBahan(<?php echo htmlspecialchars(json_encode($b)); ?>)" title="Ubah Data Bahan">
+                                                <?php echo ui_icon("edit", 12); ?> Edit
+                                            </button>
+                                            <form method="POST" action="" style="display: inline-flex; margin: 0;" onsubmit="return confirm('Hapus bahan baku \'<?php echo addslashes($b['nama_bahan']); ?>\'? Formula resep yang menggunakannya juga akan terhapus.');">
+                                                <input type="hidden" name="id_bahan" value="<?php echo $b['id']; ?>">
+                                                <button type="submit" name="hapus_bahan" class="btn-table-action btn-danger-sm" title="Hapus Bahan Baku">
+                                                    <?php echo ui_icon("trash", 12); ?> Hapus
+                                                </button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -2353,7 +2392,7 @@ if (is_owner()) {
                                 <th>Email</th>
                                 <th>Peran (Role)</th>
                                 <th>Izin Akses Layar</th>
-                                <th>Aksi</th>
+                                <th style="text-align: right;">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -2406,26 +2445,26 @@ if (is_owner()) {
                                             else echo 'Sesuai Wewenang Peran Khusus';
                                         ?>
                                     </td>
-                                    <td>
-                                        <div style="display: flex; gap: 6px;">
-                                            <button type="button" style="background: #f1f5f9; border: 1px solid var(--border); padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 11.5px; font-weight: 700; color: var(--text-dark);"
-                                                onclick="bukaModalEditPengguna(<?php echo $u['id']; ?>, '<?php echo addslashes($u['nama_lengkap']); ?>', '<?php echo addslashes($u['username']); ?>', '<?php echo addslashes($u['email']); ?>', '<?php echo $u['role']; ?>')">
-                                                <?php echo ui_icon("edit", 13); ?> Edit
+                                    <td style="text-align: right; white-space: nowrap;">
+                                        <div style="display: inline-flex; align-items: center; gap: 5px; justify-content: flex-end;">
+                                            <button type="button" class="btn-table-action"
+                                                onclick="bukaModalEditPengguna(<?php echo $u['id']; ?>, '<?php echo addslashes($u['nama_lengkap']); ?>', '<?php echo addslashes($u['username']); ?>', '<?php echo addslashes($u['email']); ?>', '<?php echo $u['role']; ?>')" title="Ubah Data Pengguna">
+                                                <?php echo ui_icon("edit", 12); ?> Edit
                                             </button>
-                                            <button type="button" style="background: #e0f2fe; border: 1px solid #bae6fd; color: #0369a1; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 11.5px; font-weight: 700;"
-                                                onclick="bukaUserSetting(<?php echo $u['id']; ?>)">
-                                                <?php echo ui_icon("settings", 13); ?> Setting
+                                            <button type="button" class="btn-table-action btn-resep"
+                                                onclick="bukaUserSetting(<?php echo $u['id']; ?>)" title="Pengaturan Profil Staf">
+                                                <?php echo ui_icon("settings", 12); ?> Setting
                                             </button>
                                             <?php if (!isset($_SESSION['id_user']) || $u['id'] != $_SESSION['id_user']): ?>
-                                                <form method="POST" action="" onsubmit="return confirm('Apakah Anda yakin ingin menghapus akun @<?php echo addslashes($u['username']); ?>?');" style="display: inline;">
+                                                <form method="POST" action="" onsubmit="return confirm('Apakah Anda yakin ingin menghapus akun @<?php echo addslashes($u['username']); ?>?');" style="display: inline-flex; margin: 0;">
                                                     <input type="hidden" name="id_user_hapus" value="<?php echo $u['id']; ?>">
-                                                    <button type="submit" name="hapus_pengguna" style="background: #fee2e2; border: 1px solid #fecaca; color: #dc2626; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 11.5px; font-weight: 700;">
-                                                        <?php echo ui_icon("trash", 13); ?> Hapus
+                                                    <button type="submit" name="hapus_pengguna" class="btn-table-action btn-danger-sm" title="Hapus Akun Pengguna">
+                                                        <?php echo ui_icon("trash", 12); ?> Hapus
                                                     </button>
                                                 </form>
                                             <?php else: ?>
-                                                <button disabled style="background: #f1f5f9; border: 1px solid var(--border); color: #94a3b8; padding: 5px 10px; border-radius: 6px; font-size: 11.5px; cursor: not-allowed;" title="Tidak dapat menghapus akun sendiri">
-                                                    <?php echo ui_icon("check", 13); ?> Aktif
+                                                <button disabled class="btn-table-action" style="background: #f1f5f9; border-color: #cbd5e1; color: #94a3b8; cursor: not-allowed; opacity: 0.7;" title="Tidak dapat menghapus akun sendiri yang sedang aktif">
+                                                    <?php echo ui_icon("check", 12); ?> Aktif
                                                 </button>
                                             <?php endif; ?>
                                         </div>
@@ -2462,7 +2501,7 @@ if (is_owner()) {
                                 <th>Deskripsi / Tanggung Jawab</th>
                                 <th>Hak Akses Modul</th>
                                 <th style="text-align: center; width: 110px;">Pengguna</th>
-                                <th style="text-align: center; width: 140px;">Aksi</th>
+                                <th style="text-align: right; width: 150px;">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -2513,22 +2552,24 @@ if (is_owner()) {
                                             <?php echo $r_count; ?> Akun
                                         </span>
                                     </td>
-                                    <td style="text-align: center;">
-                                        <div style="display: flex; gap: 6px; justify-content: center;">
-                                            <button type="button" style="background: #f1f5f9; border: 1px solid var(--border); padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 11.5px; font-weight: 700; color: var(--text-dark);"
-                                                onclick="bukaModalEditPeran(<?php echo $r['id']; ?>, '<?php echo addslashes($r['nama_peran']); ?>', '<?php echo addslashes($r['deskripsi']); ?>', <?php echo (int)$r['akses_pos']; ?>, <?php echo (int)$r['akses_dashboard']; ?>, <?php echo (int)$r['akses_stok']; ?>, <?php echo (int)$r['akses_menu']; ?>, <?php echo (int)$r['akses_pengguna']; ?>)">
-                                                <?php echo ui_icon("edit", 13); ?> Edit
+                                    <td style="text-align: right; white-space: nowrap;">
+                                        <div style="display: inline-flex; align-items: center; gap: 5px; justify-content: flex-end;">
+                                            <button type="button" class="btn-table-action"
+                                                onclick="bukaModalEditPeran(<?php echo $r['id']; ?>, '<?php echo addslashes($r['nama_peran']); ?>', '<?php echo addslashes($r['deskripsi']); ?>', <?php echo (int)$r['akses_pos']; ?>, <?php echo (int)$r['akses_dashboard']; ?>, <?php echo (int)$r['akses_stok']; ?>, <?php echo (int)$r['akses_menu']; ?>, <?php echo (int)$r['akses_pengguna']; ?>)" title="Ubah Hak Akses Peran">
+                                                <?php echo ui_icon("edit", 12); ?> Edit
                                             </button>
 
                                             <?php if (!in_array($r['nama_peran'], ['Owner', 'Admin', 'User'])): ?>
-                                                <form method="POST" action="" onsubmit="return confirm('Apakah Anda yakin ingin menghapus peran <?php echo addslashes($r['nama_peran']); ?>?');" style="display: inline;">
+                                                <form method="POST" action="" onsubmit="return confirm('Apakah Anda yakin ingin menghapus peran <?php echo addslashes($r['nama_peran']); ?>?');" style="display: inline-flex; margin: 0;">
                                                     <input type="hidden" name="id_role_hapus" value="<?php echo $r['id']; ?>">
-                                                    <button type="submit" name="hapus_peran" style="background: #fee2e2; border: 1px solid #fecaca; color: #dc2626; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 11.5px; font-weight: 700;">
-                                                        <?php echo ui_icon("trash", 13); ?> Hapus
+                                                    <button type="submit" name="hapus_peran" class="btn-table-action btn-danger-sm" title="Hapus Peran Khusus">
+                                                        <?php echo ui_icon("trash", 12); ?> Hapus
                                                     </button>
                                                 </form>
                                             <?php else: ?>
-                                                <span style="font-size: 11px; color: #94a3b8; padding: 5px 4px; font-weight: 600;" title="Peran inti sistem tidak dapat dihapus"><?php echo ui_icon("lock", 12); ?> Sistem</span>
+                                                <span class="btn-table-action" style="background: #f1f5f9; border-color: #e2e8f0; color: #94a3b8; cursor: default;" title="Peran inti sistem bawaan tidak dapat dihapus">
+                                                    <?php echo ui_icon("lock", 12); ?> Sistem
+                                                </span>
                                             <?php endif; ?>
                                         </div>
                                     </td>
@@ -3373,9 +3414,11 @@ if (is_owner()) {
                     '<td><strong>' + item.nama_bahan + '</strong></td>' +
                     '<td><span style="font-weight:700; color:var(--primary);">' + parseFloat(item.jumlah_dibutuhkan) + '</span> ' + item.satuan + '</td>' +
                     '<td style="text-align:right;">' +
-                        '<form method="POST" action="" style="display:inline;" onsubmit="return confirm(\'Keluarkan ' + item.nama_bahan + ' dari resep menu ini?\');">' +
+                        '<form method="POST" action="" style="display:inline-flex; margin:0;" onsubmit="return confirm(\'Keluarkan ' + item.nama_bahan + ' dari resep menu ini?\');">' +
                             '<input type="hidden" name="id_resep" value="' + item.id + '">' +
-                            '<button type="submit" name="hapus_resep_item" class="btn-table-action btn-danger-sm" title="Hapus dari Resep">&times;</button>' +
+                            '<button type="submit" name="hapus_resep_item" class="btn-table-action btn-danger-sm" title="Hapus dari Formula Resep">' +
+                                '<svg style="width:12px;height:12px;vertical-align:middle;flex-shrink:0;"><use href="#icon-trash"></use></svg> Hapus' +
+                            '</button>' +
                         '</form>' +
                     '</td>' +
                 '</tr>';
