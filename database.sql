@@ -35,8 +35,9 @@ CREATE TABLE IF NOT EXISTS users (
 INSERT INTO users (username, password, nama_lengkap, email, role) VALUES 
 ('owner_nihayatus', '12345', 'Ibu Nihayatus Sofiyah (Pemilik)', 'owner@fillahfood.com', 'Owner'),
 ('admin_persediaan', '12345', 'Staf Pengelola Persediaan', 'admin@fillahfood.com', 'Admin'),
-('kasir_1', '12345', 'Aisyah Marta Dewi (Kasir)', 'kasir@fillahfood.com', 'User')
-ON DUPLICATE KEY UPDATE role=VALUES(role), nama_lengkap=VALUES(nama_lengkap);
+('kasir_1', '12345', 'Aisyah Marta Dewi (Kasir Utama)', 'kasir@fillahfood.com', 'User'),
+('aisyah', '12345', 'Aisyah Marta Dewi (Kasir Utama)', 'aisyah@fillahfood.com', 'User')
+ON DUPLICATE KEY UPDATE password=VALUES(password), role=VALUES(role), nama_lengkap=VALUES(nama_lengkap);
 
 -- 3. Tabel Bahan Baku (Untuk Modul Persediaan / Inventory)
 CREATE TABLE IF NOT EXISTS bahan_baku (
