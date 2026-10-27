@@ -68,14 +68,28 @@ CREATE TABLE IF NOT EXISTS produk (
     gambar VARCHAR(255) NULL
 ) ENGINE=InnoDB;
 
-INSERT INTO produk (id, nama_produk, harga, kategori) VALUES 
-(1, 'Ayam Geprek + Nasi', 10000, 'Makanan'),
-(2, 'Es Teh Jumbo', 3000, 'Minuman'),
-(3, 'Ayam Geprek Sambal Bawang (A la Carte)', 8000, 'Makanan'),
-(4, 'Ayam Geprek Keju Mozzarella', 15000, 'Makanan'),
-(5, 'Es Jeruk Peras Segar', 5000, 'Minuman'),
-(6, 'Paket Hemat Pelajar (Ayam Geprek + Nasi + Es Teh)', 12000, 'Makanan')
-ON DUPLICATE KEY UPDATE nama_produk=VALUES(nama_produk);
+INSERT INTO produk (id, nama_produk, harga, kategori, gambar) VALUES 
+(1, 'Ayam Geprek + Nasi', 10000, 'Makanan', 'uploads/menu_ayam_geprek.png'),
+(2, 'Es Teh Jumbo', 3000, 'Minuman', 'uploads/menu_aneka_es.png'),
+(3, 'Ayam Saja', 8000, 'Makanan', 'uploads/menu_ayam_geprek.png'),
+(4, 'Ayam Geprek Keju Mozzarella', 15000, 'Makanan', 'uploads/menu_ayam_geprek.png'),
+(5, 'Es Jeruk Peras Segar', 5000, 'Minuman', 'uploads/menu_aneka_es.png'),
+(6, 'Paket Hemat Pelajar (Ayam Geprek + Nasi + Es Teh)', 12000, 'Makanan', 'uploads/menu_ayam_geprek.png'),
+(7, 'Sosis Kocek', 5000, 'Makanan', 'uploads/menu_sosis_kocek.png'),
+(8, 'Tahu Kocek', 5000, 'Makanan', 'uploads/menu_tahu_kocek.png'),
+(9, 'Tahu Krispi', 5000, 'Makanan', 'uploads/menu_tahu_krispi.png'),
+(10, 'Es Teh Cup Biasa', 2000, 'Minuman', 'uploads/menu_aneka_es.png'),
+(11, 'Es Jeruk Jumbo', 4000, 'Minuman', 'uploads/menu_aneka_es.png'),
+(12, 'Es Jeruk Cup Biasa', 3000, 'Minuman', 'uploads/menu_aneka_es.png'),
+(13, 'Es Chocolatos', 5000, 'Minuman', 'uploads/menu_aneka_es.png'),
+(14, 'Es Milo', 5000, 'Minuman', 'uploads/menu_aneka_es.png'),
+(15, 'Pop Ice', 4000, 'Minuman', 'uploads/menu_aneka_es.png'),
+(16, 'Es Kopi', 5000, 'Minuman', 'uploads/menu_aneka_es.png'),
+(17, 'Nutrisari', 3000, 'Minuman', 'uploads/menu_aneka_es.png'),
+(18, 'Matcha / Brown Sugar', 5000, 'Minuman', 'uploads/menu_aneka_es.png'),
+(19, 'Teajus', 1000, 'Minuman', 'uploads/menu_aneka_es.png'),
+(20, 'Marimas', 2000, 'Minuman', 'uploads/menu_aneka_es.png')
+ON DUPLICATE KEY UPDATE nama_produk=VALUES(nama_produk), harga=VALUES(harga), kategori=VALUES(kategori), gambar=VALUES(gambar);
 
 -- 5. Tabel Resep (Formula BOM untuk Pemotongan Stok Otomatis)
 CREATE TABLE IF NOT EXISTS resep (
