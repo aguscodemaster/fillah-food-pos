@@ -203,22 +203,20 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
     left: 0;
     right: 0;
     bottom: 0;
+    width: 100vw;
+    height: 100vh;
     background: rgba(15, 23, 42, 0.78);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
     padding: 16px;
-    z-index: 99999;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.22s ease-out;
+    z-index: 999999;
 }
 
 .hd-modal-overlay.active {
-    opacity: 1;
-    pointer-events: auto;
+    display: flex;
 }
 
 .hd-modal-card {

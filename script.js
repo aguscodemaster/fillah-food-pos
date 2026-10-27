@@ -359,9 +359,10 @@ function bukaModalFotoHD(el) {
         modalImg.style.filter = 'blur(6px)';
     }
     if (modalBadge) {
-        modalBadge.innerHTML = '<span class="spinner-dot"></span> Memuat HD...';
+        modalBadge.innerHTML = '<span class="spinner-dot" style="width:6px;height:6px;border-radius:50%;background:#38bdf8;display:inline-block;"></span> Memuat HD...';
     }
 
+    modal.style.display = 'flex';
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
 
@@ -369,7 +370,7 @@ function bukaModalFotoHD(el) {
     const hdLoader = new Image();
     hdLoader.src = hdSrc;
     hdLoader.onload = function() {
-        if (modal.classList.contains('active') && modalImg) {
+        if (modal.style.display === 'flex' && modalImg) {
             modalImg.src = hdSrc;
             modalImg.style.filter = 'blur(0)';
             if (modalBadge) modalBadge.innerHTML = '✨ Resolusi Tinggi (HD)';
@@ -398,6 +399,7 @@ function tutupModalFotoHD(event) {
     if (event && event.target && event.target !== event.currentTarget) return;
     const modal = document.getElementById('modal-foto-hd');
     if (modal) {
+        modal.style.display = 'none';
         modal.classList.remove('active');
         document.body.style.overflow = '';
     }

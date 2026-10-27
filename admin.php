@@ -840,8 +840,55 @@ if (isset($_SESSION['id_user'])) {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=<?php echo time(); ?>">
     <style>
+        /* Lightbox Modal Foto HD Standalone */
+        .hd-modal-overlay {
+            position: fixed !important;
+            top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+            width: 100vw !important; height: 100vh !important;
+            background: rgba(15, 23, 42, 0.78) !important;
+            backdrop-filter: blur(8px) !important;
+            -webkit-backdrop-filter: blur(8px) !important;
+            display: none;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 16px !important;
+            z-index: 999999 !important;
+        }
+        .hd-modal-overlay.active {
+            display: flex !important;
+        }
+        .hd-modal-card {
+            background: #ffffff !important;
+            width: 100% !important;
+            max-width: 420px !important;
+            border-radius: 18px !important;
+            overflow: hidden !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+            display: flex !important;
+            flex-direction: column !important;
+            position: relative !important;
+            margin: auto !important;
+        }
+        .hd-modal-img-wrap {
+            width: 100% !important;
+            height: 280px !important;
+            max-height: 48vh !important;
+            background: #0f172a !important;
+            position: relative !important;
+            overflow: hidden !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        .hd-modal-img {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important;
+            transition: filter 0.25s ease !important;
+        }
+
         body {
             background-color: var(--bg-canvas);
             color: var(--text-dark);
@@ -4284,10 +4331,19 @@ if (isset($_SESSION['id_user'])) {
                 modalCat.textContent = cat;
                 if (cat === 'Makanan') {
                     modalCat.className = 'hd-cat-badge makanan';
+                    modalCat.style.background = '#fff7ed';
+                    modalCat.style.color = '#ea580c';
+                    modalCat.style.border = '1px solid #fed7aa';
                 } else if (cat === 'Minuman') {
                     modalCat.className = 'hd-cat-badge minuman';
+                    modalCat.style.background = '#f0f9ff';
+                    modalCat.style.color = '#0284c7';
+                    modalCat.style.border = '1px solid #bae6fd';
                 } else {
                     modalCat.className = 'hd-cat-badge banner';
+                    modalCat.style.background = '#fef3c7';
+                    modalCat.style.color = '#d97706';
+                    modalCat.style.border = '1px solid #fde68a';
                 }
             }
 
@@ -4297,9 +4353,10 @@ if (isset($_SESSION['id_user'])) {
                 modalImg.style.filter = 'blur(6px)';
             }
             if (modalBadge) {
-                modalBadge.innerHTML = '<span class="spinner-dot"></span> Memuat HD...';
+                modalBadge.innerHTML = '<span class="spinner-dot" style="width:6px;height:6px;border-radius:50%;background:#38bdf8;display:inline-block;"></span> Memuat HD...';
             }
 
+            modal.style.display = 'flex';
             modal.classList.add('active');
             document.body.style.overflow = 'hidden';
 
@@ -4307,7 +4364,7 @@ if (isset($_SESSION['id_user'])) {
             const hdLoader = new Image();
             hdLoader.src = hdSrc;
             hdLoader.onload = function() {
-                if (modal.classList.contains('active') && modalImg) {
+                if (modal.style.display === 'flex' && modalImg) {
                     modalImg.src = hdSrc;
                     modalImg.style.filter = 'blur(0)';
                     if (modalBadge) modalBadge.innerHTML = '✨ Resolusi Tinggi (HD)';
@@ -4323,6 +4380,7 @@ if (isset($_SESSION['id_user'])) {
             if (event && event.target && event.target !== event.currentTarget) return;
             const modal = document.getElementById('modal-foto-hd');
             if (modal) {
+                modal.style.display = 'none';
                 modal.classList.remove('active');
                 document.body.style.overflow = '';
             }
@@ -4334,37 +4392,37 @@ if (isset($_SESSION['id_user'])) {
     </script>
 
     <!-- Modal Foto HD Lightbox (Ringan & Cepat: Load Thumb Dulu, Swap HD Otomatis) -->
-    <div id="modal-foto-hd" class="hd-modal-overlay" onclick="tutupModalFotoHD(event)">
-        <div class="hd-modal-card" onclick="event.stopPropagation()">
-            <button type="button" class="hd-modal-close" onclick="tutupModalFotoHD()" title="Tutup Pratinjau (Esc)">
+    <div id="modal-foto-hd" class="hd-modal-overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; width:100vw; height:100vh; background:rgba(15,23,42,0.78); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); z-index:999999; align-items:center; justify-content:center; padding:16px;" onclick="tutupModalFotoHD(event)">
+        <div class="hd-modal-card" style="background:#ffffff; width:100%; max-width:420px; border-radius:18px; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); display:flex; flex-direction:column; position:relative; margin:auto;" onclick="event.stopPropagation()">
+            <button type="button" class="hd-modal-close" onclick="tutupModalFotoHD()" title="Tutup Pratinjau (Esc)" style="position:absolute; top:12px; right:12px; z-index:10; width:34px; height:34px; border-radius:50%; background:rgba(15,23,42,0.65); color:#ffffff; border:1px solid rgba(255,255,255,0.25); display:flex; align-items:center; justify-content:center; cursor:pointer;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
             
-            <div class="hd-modal-img-wrap">
-                <span id="hd-modal-badge" class="hd-modal-badge">
-                    <span class="spinner-dot"></span> Memuat HD...
+            <div class="hd-modal-img-wrap" style="width:100%; height:280px; max-height:48vh; background:#0f172a; position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center;">
+                <span id="hd-modal-badge" class="hd-modal-badge" style="position:absolute; top:12px; left:12px; background:rgba(15,23,42,0.75); color:#38bdf8; font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; display:inline-flex; align-items:center; gap:6px; border:1px solid rgba(56,189,248,0.3); z-index:2;">
+                    <span class="spinner-dot" style="width:6px;height:6px;border-radius:50%;background:#38bdf8;display:inline-block;"></span> Memuat HD...
                 </span>
-                <img id="hd-modal-img" class="hd-modal-img" src="" alt="Foto Produk HD">
+                <img id="hd-modal-img" class="hd-modal-img" src="" alt="Foto Produk HD" style="width:100%; height:100%; object-fit:cover;">
             </div>
             
-            <div class="hd-modal-body">
-                <div class="hd-modal-head-row">
-                    <h3 id="hd-modal-title" class="hd-modal-title">Nama Menu</h3>
-                    <span id="hd-modal-cat" class="hd-cat-badge makanan">Makanan</span>
+            <div class="hd-modal-body" style="padding:16px 20px 20px 20px; display:flex; flex-direction:column; gap:12px; background:#ffffff;">
+                <div class="hd-modal-head-row" style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+                    <h3 id="hd-modal-title" class="hd-modal-title" style="font-size:17px; font-weight:800; color:#0f172a; margin:0; line-height:1.3;">Nama Menu</h3>
+                    <span id="hd-modal-cat" class="hd-cat-badge makanan" style="font-size:11px; font-weight:700; padding:3px 8px; border-radius:12px; white-space:nowrap; background:#fff7ed; color:#ea580c; border:1px solid #fed7aa;">Makanan</span>
                 </div>
                 
-                <div class="hd-modal-price-row">
+                <div class="hd-modal-price-row" style="display:flex; justify-content:space-between; align-items:center; padding-top:6px; border-top:1px dashed #e2e8f0;">
                     <div>
-                        <div style="font-size: 11px; color: var(--text-muted); font-weight: 600;">Harga Satuan</div>
-                        <div id="hd-modal-price" class="hd-modal-price">Rp 0</div>
+                        <div style="font-size:11px; color:#64748b; font-weight:600;">Harga Satuan</div>
+                        <div id="hd-modal-price" class="hd-modal-price" style="font-size:18px; font-weight:800; color:#ea580c;">Rp 0</div>
                     </div>
-                    <div style="font-size: 11.5px; color: #16a34a; font-weight: 700; display:flex; align-items:center; gap:4px;">
+                    <div style="font-size:11.5px; color:#16a34a; font-weight:700; display:flex; align-items:center; gap:4px;">
                         <span style="width:7px; height:7px; background:#16a34a; border-radius:50%; display:inline-block;"></span> Katalog Menu
                     </div>
                 </div>
                 
-                <div class="hd-modal-actions">
-                    <button type="button" class="btn-hd-action" onclick="tutupModalFotoHD()">
+                <div class="hd-modal-actions" style="display:flex; gap:10px; margin-top:4px;">
+                    <button type="button" class="btn-hd-action" onclick="tutupModalFotoHD()" style="flex:1; background:#ea580c; color:#ffffff; border:none; padding:10px 16px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 4px 12px -2px rgba(234,88,12,0.4);">
                         <span>Tutup Pratinjau</span>
                     </button>
                 </div>
