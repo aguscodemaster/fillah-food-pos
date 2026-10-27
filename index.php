@@ -32,6 +32,20 @@ if (isset($conn) && $conn) {
             foto VARCHAR(255) NULL
         ) ENGINE=InnoDB");
 
+        // Migrasi Otomatis: Tambahkan kolom yang belum ada di database lama (seperti nama_lengkap, email, foto)
+        $chk_nl = $conn->query("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='$db_name' AND TABLE_NAME='users' AND COLUMN_NAME='nama_lengkap'");
+        if ($chk_nl && $chk_nl->num_rows === 0) {
+            $conn->query("ALTER TABLE users ADD COLUMN nama_lengkap VARCHAR(100) NOT NULL DEFAULT ''");
+        }
+        $chk_em = $conn->query("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='$db_name' AND TABLE_NAME='users' AND COLUMN_NAME='email'");
+        if ($chk_em && $chk_em->num_rows === 0) {
+            $conn->query("ALTER TABLE users ADD COLUMN email VARCHAR(100) NULL");
+        }
+        $chk_ft = $conn->query("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='$db_name' AND TABLE_NAME='users' AND COLUMN_NAME='foto'");
+        if ($chk_ft && $chk_ft->num_rows === 0) {
+            $conn->query("ALTER TABLE users ADD COLUMN foto VARCHAR(255) NULL");
+        }
+
         // Perbaiki tipe ENUM menjadi VARCHAR jika belum termigrasi
         $col_role = $conn->query("SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='$db_name' AND TABLE_NAME='users' AND COLUMN_NAME='role'");
         if ($col_role && ($cr = $col_role->fetch_assoc())) {
@@ -40,13 +54,23 @@ if (isset($conn) && $conn) {
             }
         }
 
+        // Pastikan kolom gambar pada tabel produk dan bahan_baku juga tersedia
+        $chk_p = $conn->query("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='$db_name' AND TABLE_NAME='produk' AND COLUMN_NAME='gambar'");
+        if ($chk_p && $chk_p->num_rows === 0) {
+            $conn->query("ALTER TABLE produk ADD COLUMN gambar VARCHAR(255) NULL");
+        }
+        $chk_b = $conn->query("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='$db_name' AND TABLE_NAME='bahan_baku' AND COLUMN_NAME='gambar'");
+        if ($chk_b && $chk_b->num_rows === 0) {
+            $conn->query("ALTER TABLE bahan_baku ADD COLUMN gambar VARCHAR(255) NULL");
+        }
+
         // Pastikan seluruh akun demo default ada dan kata sandi 12345 selalu aktif
         $conn->query("INSERT INTO users (username, password, nama_lengkap, email, role) VALUES 
             ('owner_nihayatus', '12345', 'Ibu Nihayatus Sofiyah (Pemilik)', 'owner@fillahfood.com', 'Owner'),
             ('admin_persediaan', '12345', 'Staf Pengelola Persediaan', 'admin@fillahfood.com', 'Admin'),
             ('kasir_1', '12345', 'Aisyah Marta Dewi (Kasir Utama)', 'kasir@fillahfood.com', 'User'),
             ('aisyah', '12345', 'Aisyah Marta Dewi (Kasir Utama)', 'aisyah@fillahfood.com', 'User')
-            ON DUPLICATE KEY UPDATE password = VALUES(password), role = VALUES(role)");
+            ON DUPLICATE KEY UPDATE password = VALUES(password), role = VALUES(role), nama_lengkap = VALUES(nama_lengkap)");
     }
 }
 

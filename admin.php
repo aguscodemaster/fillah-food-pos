@@ -65,6 +65,10 @@ $chk_produk = $conn->query("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE
 if ($chk_produk === 0) $conn->query("ALTER TABLE produk ADD COLUMN gambar VARCHAR(255) NULL");
 $chk_bahan = $conn->query("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='$db_name' AND TABLE_NAME='bahan_baku' AND COLUMN_NAME='gambar'")->num_rows;
 if ($chk_bahan === 0) $conn->query("ALTER TABLE bahan_baku ADD COLUMN gambar VARCHAR(255) NULL");
+$chk_user_nl = $conn->query("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='$db_name' AND TABLE_NAME='users' AND COLUMN_NAME='nama_lengkap'")->num_rows;
+if ($chk_user_nl === 0) $conn->query("ALTER TABLE users ADD COLUMN nama_lengkap VARCHAR(100) NOT NULL DEFAULT ''");
+$chk_user_em = $conn->query("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='$db_name' AND TABLE_NAME='users' AND COLUMN_NAME='email'")->num_rows;
+if ($chk_user_em === 0) $conn->query("ALTER TABLE users ADD COLUMN email VARCHAR(100) NULL");
 $chk_user_foto = $conn->query("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='$db_name' AND TABLE_NAME='users' AND COLUMN_NAME='foto'")->num_rows;
 if ($chk_user_foto === 0) $conn->query("ALTER TABLE users ADD COLUMN foto VARCHAR(255) NULL");
 
