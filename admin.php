@@ -2556,9 +2556,31 @@ if (isset($_SESSION['id_user'])) {
                                 <?php foreach ($produk_list as $p): ?>
                                     <tr class="baris-produk" data-kategori="<?php echo htmlspecialchars($p['kategori']); ?>">
                                         <td>
-                                            <div class="item-thumb-box">
-                                                <?php if (!empty($p['gambar']) && file_exists(__DIR__ . '/' . $p['gambar'])): ?>
-                                                    <img src="<?php echo htmlspecialchars($p['gambar']); ?>" alt="<?php echo htmlspecialchars($p['nama_produk']); ?>">
+                                            <?php
+                                                $thumb_src = (!empty($p['gambar']) && file_exists(__DIR__ . '/' . $p['gambar'])) ? $p['gambar'] : '';
+                                                $hd_src = $thumb_src;
+                                                if (!empty($thumb_src)) {
+                                                    $info = pathinfo($thumb_src);
+                                                    $dir = (!empty($info['dirname']) && $info['dirname'] !== '.') ? $info['dirname'] . '/' : '';
+                                                    $candidate_hd = $dir . $info['filename'] . '_hd.' . $info['extension'];
+                                                    if (file_exists(__DIR__ . '/' . $candidate_hd)) {
+                                                        $hd_src = $candidate_hd;
+                                                    }
+                                                }
+                                            ?>
+                                            <div class="item-thumb-box"
+                                                 <?php if (!empty($thumb_src)): ?>
+                                                     onclick="bukaModalFotoHD(this)"
+                                                     data-thumb="<?php echo htmlspecialchars($thumb_src); ?>"
+                                                     data-hd="<?php echo htmlspecialchars($hd_src); ?>"
+                                                     data-nama="<?php echo htmlspecialchars($p['nama_produk']); ?>"
+                                                     data-harga="Rp <?php echo number_format($p['harga'], 0, ',', '.'); ?>"
+                                                     data-cat="<?php echo htmlspecialchars($p['kategori']); ?>"
+                                                     title="Klik untuk memperbesar foto HD"
+                                                     style="cursor: pointer; position: relative;"
+                                                 <?php endif; ?>>
+                                                <?php if (!empty($thumb_src)): ?>
+                                                    <img src="<?php echo htmlspecialchars($thumb_src); ?>" alt="<?php echo htmlspecialchars($p['nama_produk']); ?>" loading="lazy">
                                                 <?php else: ?>
                                                     <span><?php echo ($p['kategori'] === 'Minuman') ? ui_icon("utensils", 24) : ui_icon("utensils", 24); ?></span>
                                                 <?php endif; ?>
@@ -4238,6 +4260,116 @@ if (isset($_SESSION['id_user'])) {
                 resetPreview('preview-produk', icon);
             }
         }
+
+        // --- Fitur Lightbox Modal Foto HD Cepat & Ringan ---
+        function bukaModalFotoHD(el) {
+            if (!el) return;
+            const thumbSrc = el.getAttribute('data-thumb') || '';
+            const hdSrc    = el.getAttribute('data-hd') || thumbSrc;
+            const nama     = el.getAttribute('data-nama') || 'Foto Produk';
+            const harga    = el.getAttribute('data-harga') || '';
+            const cat      = el.getAttribute('data-cat') || '';
+
+            const modal      = document.getElementById('modal-foto-hd');
+            if (!modal) return;
+            const modalImg   = document.getElementById('hd-modal-img');
+            const modalTitle = document.getElementById('hd-modal-title');
+            const modalPrice = document.getElementById('hd-modal-price');
+            const modalCat   = document.getElementById('hd-modal-cat');
+            const modalBadge = document.getElementById('hd-modal-badge');
+
+            if (modalTitle) modalTitle.textContent = nama;
+            if (modalPrice) modalPrice.textContent = harga;
+            if (modalCat) {
+                modalCat.textContent = cat;
+                if (cat === 'Makanan') {
+                    modalCat.className = 'hd-cat-badge makanan';
+                } else if (cat === 'Minuman') {
+                    modalCat.className = 'hd-cat-badge minuman';
+                } else {
+                    modalCat.className = 'hd-cat-badge banner';
+                }
+            }
+
+            // Tampilkan thumbnail instan terlebih dahulu (ringan, tanpa menunggu)
+            if (modalImg) {
+                modalImg.src = thumbSrc;
+                modalImg.style.filter = 'blur(6px)';
+            }
+            if (modalBadge) {
+                modalBadge.innerHTML = '<span class="spinner-dot"></span> Memuat HD...';
+            }
+
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+
+            // Muat versi HD di latar belakang secara asinkron
+            const hdLoader = new Image();
+            hdLoader.src = hdSrc;
+            hdLoader.onload = function() {
+                if (modal.classList.contains('active') && modalImg) {
+                    modalImg.src = hdSrc;
+                    modalImg.style.filter = 'blur(0)';
+                    if (modalBadge) modalBadge.innerHTML = '✨ Resolusi Tinggi (HD)';
+                }
+            };
+            hdLoader.onerror = function() {
+                if (modalImg) modalImg.style.filter = 'blur(0)';
+                if (modalBadge) modalBadge.innerHTML = 'Foto Produk Asli';
+            };
+        }
+
+        function tutupModalFotoHD(event) {
+            if (event && event.target && event.target !== event.currentTarget) return;
+            const modal = document.getElementById('modal-foto-hd');
+            if (modal) {
+                modal.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') tutupModalFotoHD();
+        });
     </script>
+
+    <!-- Modal Foto HD Lightbox (Ringan & Cepat: Load Thumb Dulu, Swap HD Otomatis) -->
+    <div id="modal-foto-hd" class="hd-modal-overlay" onclick="tutupModalFotoHD(event)">
+        <div class="hd-modal-card" onclick="event.stopPropagation()">
+            <button type="button" class="hd-modal-close" onclick="tutupModalFotoHD()" title="Tutup Pratinjau (Esc)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+            
+            <div class="hd-modal-img-wrap">
+                <span id="hd-modal-badge" class="hd-modal-badge">
+                    <span class="spinner-dot"></span> Memuat HD...
+                </span>
+                <img id="hd-modal-img" class="hd-modal-img" src="" alt="Foto Produk HD">
+            </div>
+            
+            <div class="hd-modal-body">
+                <div class="hd-modal-head-row">
+                    <h3 id="hd-modal-title" class="hd-modal-title">Nama Menu</h3>
+                    <span id="hd-modal-cat" class="hd-cat-badge makanan">Makanan</span>
+                </div>
+                
+                <div class="hd-modal-price-row">
+                    <div>
+                        <div style="font-size: 11px; color: var(--text-muted); font-weight: 600;">Harga Satuan</div>
+                        <div id="hd-modal-price" class="hd-modal-price">Rp 0</div>
+                    </div>
+                    <div style="font-size: 11.5px; color: #16a34a; font-weight: 700; display:flex; align-items:center; gap:4px;">
+                        <span style="width:7px; height:7px; background:#16a34a; border-radius:50%; display:inline-block;"></span> Katalog Menu
+                    </div>
+                </div>
+                
+                <div class="hd-modal-actions">
+                    <button type="button" class="btn-hd-action" onclick="tutupModalFotoHD()">
+                        <span>Tutup Pratinjau</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

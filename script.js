@@ -306,3 +306,107 @@ function switchKasirView(view) {
     }
 }
 window.switchKasirView = switchKasirView;
+
+// --- 14. Lightbox Modal Foto HD Cepat & Ringan (Progressive Swap) ---
+function bukaModalFotoHD(el) {
+    if (!el) return;
+    const thumbSrc = el.getAttribute('data-thumb') || '';
+    const hdSrc    = el.getAttribute('data-hd') || thumbSrc;
+    const nama     = el.getAttribute('data-nama') || 'Foto Produk';
+    const harga    = el.getAttribute('data-harga') || '';
+    const cat      = el.getAttribute('data-cat') || '';
+    const prodId   = el.getAttribute('data-id') || null;
+    const rawHarga = el.getAttribute('data-rawharga') || null;
+
+    const modal      = document.getElementById('modal-foto-hd');
+    if (!modal) return;
+    const modalImg   = document.getElementById('hd-modal-img');
+    const modalTitle = document.getElementById('hd-modal-title');
+    const modalPrice = document.getElementById('hd-modal-price');
+    const modalCat   = document.getElementById('hd-modal-cat');
+    const modalBadge = document.getElementById('hd-modal-badge');
+    const btnAction  = document.getElementById('hd-modal-action-btn');
+
+    if (modalTitle) modalTitle.textContent = nama;
+    if (modalPrice) modalPrice.textContent = harga;
+    if (modalCat) {
+        modalCat.textContent = cat;
+        if (cat === 'Makanan') {
+            modalCat.className = 'hd-cat-badge makanan';
+        } else if (cat === 'Minuman') {
+            modalCat.className = 'hd-cat-badge minuman';
+        } else {
+            modalCat.className = 'hd-cat-badge banner';
+        }
+    }
+
+    // Konfigurasi Tombol Tambah ke Pesanan (di Kasir POS)
+    if (btnAction) {
+        if (prodId && window.tambahItem) {
+            btnAction.style.display = 'inline-flex';
+            btnAction.onclick = function() {
+                window.tambahItem(parseInt(prodId), nama, parseFloat(rawHarga));
+                tutupModalFotoHD();
+            };
+        } else {
+            btnAction.style.display = 'none';
+        }
+    }
+
+    // Tampilkan thumbnail instan terlebih dahulu (ringan, tanpa menunggu)
+    if (modalImg) {
+        modalImg.src = thumbSrc;
+        modalImg.style.filter = 'blur(6px)';
+    }
+    if (modalBadge) {
+        modalBadge.innerHTML = '<span class="spinner-dot"></span> Memuat HD...';
+    }
+
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+
+    // Muat versi HD di latar belakang secara asinkron
+    const hdLoader = new Image();
+    hdLoader.src = hdSrc;
+    hdLoader.onload = function() {
+        if (modal.classList.contains('active') && modalImg) {
+            modalImg.src = hdSrc;
+            modalImg.style.filter = 'blur(0)';
+            if (modalBadge) modalBadge.innerHTML = '✨ Resolusi Tinggi (HD)';
+        }
+    };
+    hdLoader.onerror = function() {
+        if (modalImg) modalImg.style.filter = 'blur(0)';
+        if (modalBadge) modalBadge.innerHTML = 'Foto Produk Asli';
+    };
+}
+
+function bukaModalBannerHD() {
+    bukaModalFotoHD({
+        getAttribute: function(attr) {
+            if (attr === 'data-thumb') return 'uploads/menu_banner_hd.png';
+            if (attr === 'data-hd') return 'uploads/menu_banner_hd.png';
+            if (attr === 'data-nama') return 'Banner Resmi Fillah Food & Drink';
+            if (attr === 'data-harga') return 'Daftar Harga & Menu Lengkap';
+            if (attr === 'data-cat') return 'Banner Resmi';
+            return '';
+        }
+    });
+}
+
+function tutupModalFotoHD(event) {
+    if (event && event.target && event.target !== event.currentTarget) return;
+    const modal = document.getElementById('modal-foto-hd');
+    if (modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+}
+
+window.bukaModalFotoHD = bukaModalFotoHD;
+window.bukaModalBannerHD = bukaModalBannerHD;
+window.tutupModalFotoHD = tutupModalFotoHD;
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') tutupModalFotoHD();
+});

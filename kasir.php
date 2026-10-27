@@ -1207,6 +1207,10 @@ $waktu_sekarang = date('d/m/Y H:i:s') . ' WIB';
                     <button class="cat-btn active" onclick="filterKategori('Semua')">Semua Menu</button>
                     <button class="cat-btn" onclick="filterKategori('Makanan')">Makanan</button>
                     <button class="cat-btn" onclick="filterKategori('Minuman')">Minuman</button>
+                    <button type="button" class="cat-btn" onclick="bukaModalBannerHD()" title="Lihat Banner Menu Resmi HD" style="background:#fff7ed; border-color:#fdba74; color:#ea580c; display:inline-flex; align-items:center; gap:5px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+                        <span>Banner HD</span>
+                    </button>
                 </div>
 
                 <div class="search-box">
@@ -1223,6 +1227,18 @@ $waktu_sekarang = date('d/m/Y H:i:s') . ' WIB';
                     <p style="color: #888; font-style: italic;">Belum ada menu di database.</p>
                 <?php else: ?>
                     <?php foreach ($daftar_produk as $p): ?>
+                        <?php
+                            $thumb_src = !empty($p['gambar']) ? $p['gambar'] : '';
+                            $hd_src = $thumb_src;
+                            if (!empty($thumb_src)) {
+                                $info = pathinfo($thumb_src);
+                                $dir = (!empty($info['dirname']) && $info['dirname'] !== '.') ? $info['dirname'] . '/' : '';
+                                $candidate_hd = $dir . $info['filename'] . '_hd.' . $info['extension'];
+                                if (file_exists($candidate_hd)) {
+                                    $hd_src = $candidate_hd;
+                                }
+                            }
+                        ?>
                         <div class="product-card" 
                              data-kategori="<?php echo htmlspecialchars($p['kategori']); ?>" 
                              data-nama="<?php echo htmlspecialchars(strtolower($p['nama_produk'])); ?>"
@@ -1230,11 +1246,26 @@ $waktu_sekarang = date('d/m/Y H:i:s') . ' WIB';
                             
                             <span class="card-header-badge"><?php echo htmlspecialchars($p['kategori']); ?></span>
                             
-                            <div class="product-thumb">
-                                <?php if (!empty($p['gambar']) && file_exists($p['gambar'])): ?>
-                                    <img src="<?php echo htmlspecialchars($p['gambar']); ?>" 
+                            <div class="product-thumb" 
+                                 <?php if (!empty($thumb_src) && file_exists($thumb_src)): ?>
+                                     onclick="event.stopPropagation(); bukaModalFotoHD(this);"
+                                     data-thumb="<?php echo htmlspecialchars($thumb_src); ?>"
+                                     data-hd="<?php echo htmlspecialchars($hd_src); ?>"
+                                     data-nama="<?php echo htmlspecialchars($p['nama_produk']); ?>"
+                                     data-harga="Rp <?php echo number_format($p['harga'], 0, ',', '.'); ?>"
+                                     data-cat="<?php echo htmlspecialchars($p['kategori']); ?>"
+                                     data-id="<?php echo $p['id']; ?>"
+                                     data-rawharga="<?php echo $p['harga']; ?>"
+                                     title="Klik untuk memperbesar foto HD"
+                                 <?php endif; ?>>
+                                <?php if (!empty($thumb_src) && file_exists($thumb_src)): ?>
+                                    <img src="<?php echo htmlspecialchars($thumb_src); ?>" 
                                          alt="<?php echo htmlspecialchars($p['nama_produk']); ?>"
+                                         loading="lazy"
                                          style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
+                                    <span class="zoom-hint" title="Perbesar HD">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+                                    </span>
                                 <?php else: ?>
                                     <?php if ($p['kategori'] === 'Makanan'): ?>
                                         <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"></path><path d="M7 2v20"></path><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"></path></svg>
@@ -1437,6 +1468,48 @@ $waktu_sekarang = date('d/m/Y H:i:s') . ' WIB';
                     <span>Cetak Struk</span>
                 </button>
                 <button class="btn-close-modal" onclick="tutupModalStruk()">Tutup & Pesanan Baru</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Foto HD Lightbox (Ringan & Cepat: Load Thumb Dulu, Swap HD Otomatis) -->
+    <div id="modal-foto-hd" class="hd-modal-overlay" onclick="tutupModalFotoHD(event)">
+        <div class="hd-modal-card" onclick="event.stopPropagation()">
+            <button type="button" class="hd-modal-close" onclick="tutupModalFotoHD()" title="Tutup Pratinjau (Esc)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+            
+            <div class="hd-modal-img-wrap">
+                <span id="hd-modal-badge" class="hd-modal-badge">
+                    <span class="spinner-dot"></span> Memuat HD...
+                </span>
+                <img id="hd-modal-img" class="hd-modal-img" src="" alt="Foto Produk HD">
+            </div>
+            
+            <div class="hd-modal-body">
+                <div class="hd-modal-head-row">
+                    <h3 id="hd-modal-title" class="hd-modal-title">Nama Menu</h3>
+                    <span id="hd-modal-cat" class="hd-cat-badge makanan">Makanan</span>
+                </div>
+                
+                <div class="hd-modal-price-row">
+                    <div>
+                        <div style="font-size: 11px; color: var(--text-muted); font-weight: 600;">Harga Satuan</div>
+                        <div id="hd-modal-price" class="hd-modal-price">Rp 0</div>
+                    </div>
+                    <div style="font-size: 11.5px; color: #16a34a; font-weight: 700; display:flex; align-items:center; gap:4px;">
+                        <span style="width:7px; height:7px; background:#16a34a; border-radius:50%; display:inline-block;"></span> Menu Aktif POS
+                    </div>
+                </div>
+                
+                <div class="hd-modal-actions">
+                    <button type="button" class="btn-hd-action" id="hd-modal-action-btn">
+                        <span>+</span> Tambah ke Pesanan Kasir
+                    </button>
+                    <button type="button" class="btn-hd-close-sec" onclick="tutupModalFotoHD()">
+                        Tutup
+                    </button>
+                </div>
             </div>
         </div>
     </div>

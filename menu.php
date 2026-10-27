@@ -285,7 +285,13 @@ if ($result) {
                         <p style="font-size: 11px; opacity: 0.9;">Spesialis Ayam Geprek & Kuliner</p>
                     </div>
                 </div>
-                <span class="status-badge"><span class="status-dot"></span> Buka (10:00 - 21:00)</span>
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <button type="button" onclick="bukaModalBannerHD()" style="background: rgba(255,255,255,0.22); border: 1px solid rgba(255,255,255,0.4); color: #ffffff; padding: 5px 12px; border-radius: 20px; font-size: 11.5px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: all 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.32)'" onmouseout="this.style.background='rgba(255,255,255,0.22)'">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+                        <span>Lihat Banner HD</span>
+                    </button>
+                    <span class="status-badge"><span class="status-dot"></span> Buka (10:00 - 21:00)</span>
+                </div>
             </div>
 
             <div class="location-info">
@@ -307,12 +313,38 @@ if ($result) {
         <!-- Menu List -->
         <main class="menu-list">
             <?php foreach ($menu_list as $item): ?>
+                <?php
+                    $thumb_src = !empty($item['gambar']) ? $item['gambar'] : '';
+                    $hd_src = $thumb_src;
+                    if (!empty($thumb_src)) {
+                        $info = pathinfo($thumb_src);
+                        $dir = (!empty($info['dirname']) && $info['dirname'] !== '.') ? $info['dirname'] . '/' : '';
+                        $candidate_hd = $dir . $info['filename'] . '_hd.' . $info['extension'];
+                        if (file_exists($candidate_hd)) {
+                            $hd_src = $candidate_hd;
+                        }
+                    }
+                ?>
                 <div class="menu-card" data-cat="<?php echo htmlspecialchars($item['kategori']); ?>">
-                    <div class="menu-icon">
-                        <?php if (!empty($item['gambar']) && file_exists($item['gambar'])): ?>
-                            <img src="<?php echo htmlspecialchars($item['gambar']); ?>" 
+                    <div class="menu-icon" 
+                         <?php if (!empty($thumb_src) && file_exists($thumb_src)): ?>
+                             onclick="bukaModalFotoHD(this)"
+                             data-thumb="<?php echo htmlspecialchars($thumb_src); ?>"
+                             data-hd="<?php echo htmlspecialchars($hd_src); ?>"
+                             data-nama="<?php echo htmlspecialchars($item['nama_produk']); ?>"
+                             data-harga="Rp <?php echo number_format($item['harga'], 0, ',', '.'); ?>"
+                             data-cat="<?php echo htmlspecialchars($item['kategori']); ?>"
+                             title="Klik untuk melihat foto HD"
+                             style="cursor: pointer;"
+                         <?php endif; ?>>
+                        <?php if (!empty($thumb_src) && file_exists($thumb_src)): ?>
+                            <img src="<?php echo htmlspecialchars($thumb_src); ?>" 
                                  alt="<?php echo htmlspecialchars($item['nama_produk']); ?>"
+                                 loading="lazy"
                                  style="width:100%;height:100%;object-fit:cover;">
+                            <span class="zoom-hint" title="Perbesar Foto HD">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+                            </span>
                         <?php else: ?>
                             <?php if ($item['kategori'] === 'Makanan'): ?>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"></path><path d="M7 2v20"></path><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"></path></svg>
@@ -348,6 +380,49 @@ if ($result) {
         </footer>
     </div>
 
+    <!-- Modal Foto HD Lightbox (Ringan & Cepat: Load Thumb Dulu, Swap HD Otomatis) -->
+    <div id="modal-foto-hd" class="hd-modal-overlay" onclick="tutupModalFotoHD(event)">
+        <div class="hd-modal-card" onclick="event.stopPropagation()">
+            <button type="button" class="hd-modal-close" onclick="tutupModalFotoHD()" title="Tutup Pratinjau (Esc)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+            
+            <div class="hd-modal-img-wrap">
+                <span id="hd-modal-badge" class="hd-modal-badge">
+                    <span class="spinner-dot"></span> Memuat HD...
+                </span>
+                <img id="hd-modal-img" class="hd-modal-img" src="" alt="Foto Produk HD">
+            </div>
+            
+            <div class="hd-modal-body">
+                <div class="hd-modal-head-row">
+                    <h3 id="hd-modal-title" class="hd-modal-title">Nama Menu</h3>
+                    <span id="hd-modal-cat" class="hd-cat-badge makanan">Makanan</span>
+                </div>
+                
+                <div class="hd-modal-price-row">
+                    <div>
+                        <div style="font-size: 11px; color: var(--text-muted); font-weight: 600;">Harga Menu</div>
+                        <div id="hd-modal-price" class="hd-modal-price">Rp 0</div>
+                    </div>
+                    <div style="font-size: 11.5px; color: #16a34a; font-weight: 700; display:flex; align-items:center; gap:4px;">
+                        <span style="width:7px; height:7px; background:#16a34a; border-radius:50%; display:inline-block;"></span> Tersedia
+                    </div>
+                </div>
+
+                <div style="font-size: 11.5px; color: var(--text-muted); line-height: 1.45; background:#f8fafc; padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border);">
+                    💡 <strong>Tips:</strong> Foto di atas merupakan sajian asli Fillah Food &amp; Drink. Tentukan pilihan Anda lalu sebutkan ke kasir di kasir depan.
+                </div>
+                
+                <div class="hd-modal-actions">
+                    <button type="button" class="btn-hd-action" onclick="tutupModalFotoHD()">
+                        <span>Tutup Pratinjau</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         function filterCat(cat, btn) {
             const btns = document.querySelectorAll('.cat-btn');
@@ -367,6 +442,83 @@ if ($result) {
                 }
             });
         }
+
+        // --- Fitur Lightbox Modal Foto HD Cepat & Ringan ---
+        function bukaModalFotoHD(el) {
+            const thumbSrc = el.getAttribute('data-thumb') || '';
+            const hdSrc    = el.getAttribute('data-hd') || thumbSrc;
+            const nama     = el.getAttribute('data-nama') || 'Foto Produk';
+            const harga    = el.getAttribute('data-harga') || '';
+            const cat      = el.getAttribute('data-cat') || '';
+
+            const modal      = document.getElementById('modal-foto-hd');
+            const modalImg   = document.getElementById('hd-modal-img');
+            const modalTitle = document.getElementById('hd-modal-title');
+            const modalPrice = document.getElementById('hd-modal-price');
+            const modalCat   = document.getElementById('hd-modal-cat');
+            const modalBadge = document.getElementById('hd-modal-badge');
+
+            modalTitle.textContent = nama;
+            modalPrice.textContent = harga;
+            modalCat.textContent = cat;
+            if (cat === 'Makanan') {
+                modalCat.className = 'hd-cat-badge makanan';
+            } else if (cat === 'Minuman') {
+                modalCat.className = 'hd-cat-badge minuman';
+            } else {
+                modalCat.className = 'hd-cat-badge banner';
+            }
+
+            // Tampilkan thumbnail instan terlebih dahulu (ringan, tanpa menunggu)
+            modalImg.src = thumbSrc;
+            modalImg.style.filter = 'blur(6px)';
+            modalBadge.innerHTML = '<span class="spinner-dot"></span> Memuat HD...';
+
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+
+            // Muat versi HD di latar belakang secara asinkron
+            const hdLoader = new Image();
+            hdLoader.src = hdSrc;
+            hdLoader.onload = function() {
+                if (modal.classList.contains('active')) {
+                    modalImg.src = hdSrc;
+                    modalImg.style.filter = 'blur(0)';
+                    modalBadge.innerHTML = '✨ Resolusi Tinggi (HD)';
+                }
+            };
+            hdLoader.onerror = function() {
+                modalImg.style.filter = 'blur(0)';
+                modalBadge.innerHTML = 'Foto Produk Asli';
+            };
+        }
+
+        function bukaModalBannerHD() {
+            bukaModalFotoHD({
+                getAttribute: function(attr) {
+                    if (attr === 'data-thumb') return 'uploads/menu_banner_hd.png';
+                    if (attr === 'data-hd') return 'uploads/menu_banner_hd.png';
+                    if (attr === 'data-nama') return 'Banner Resmi Fillah Food & Drink';
+                    if (attr === 'data-harga') return 'Daftar Harga & Menu Lengkap';
+                    if (attr === 'data-cat') return 'Banner Resmi';
+                    return '';
+                }
+            });
+        }
+
+        function tutupModalFotoHD(event) {
+            if (event && event.target && event.target !== event.currentTarget) return;
+            const modal = document.getElementById('modal-foto-hd');
+            if (modal) {
+                modal.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        }
+
+        // Shortcut Esc untuk menutup modal
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') tutupModalFotoHD();
+        });
     </script>
 </body>
 </html>
