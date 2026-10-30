@@ -420,27 +420,3 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
     100% { opacity: 1; transform: scale(1.2); }
 }
 
-/* Thumbnail Zoom Hint Badge on Hover */
-.zoom-hint {
-    position: absolute;
-    bottom: 4px;
-    right: 4px;
-    background: rgba(15, 23, 42, 0.72);
-    color: #ffffff;
-    border-radius: 6px;
-    padding: 3px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(2px);
-    opacity: 0.82;
-    transition: all 0.15s ease;
-    pointer-events: none;
-}
-
-.menu-icon:hover .zoom-hint,
-.product-thumb:hover .zoom-hint {
-    opacity: 1;
-    transform: scale(1.1);
-    background: var(--primary);
-}
