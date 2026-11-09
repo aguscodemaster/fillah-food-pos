@@ -391,7 +391,16 @@ if (is_owner()) {
         $email_new = trim($_POST['email']);
         $role_new = trim($_POST['role']);
 
-        if (!in_array($role_new, ['Owner', 'Admin', 'Kasir'])) {
+        $roles_valid_query = $conn->query("SELECT nama_peran FROM roles");
+        $daftar_role_valid = ['Owner', 'Admin', 'Kasir', 'User'];
+        if ($roles_valid_query) {
+            while ($r_val = $roles_valid_query->fetch_assoc()) {
+                $daftar_role_valid[] = $r_val['nama_peran'];
+            }
+        }
+        $daftar_role_valid = array_unique($daftar_role_valid);
+
+        if (!in_array($role_new, $daftar_role_valid)) {
             $pesan_error = "Peran (role) yang dipilih tidak valid!";
         } elseif (empty($user_new) || empty($pass_new) || empty($nama_new)) {
             $pesan_error = "Nama lengkap, username, dan password wajib diisi!";
@@ -422,7 +431,16 @@ if (is_owner()) {
         $role_target = trim($_POST['role']);
         $pass_target = trim($_POST['password']);
 
-        if (!in_array($role_target, ['Owner', 'Admin', 'Kasir'])) {
+        $roles_valid_query = $conn->query("SELECT nama_peran FROM roles");
+        $daftar_role_valid = ['Owner', 'Admin', 'Kasir', 'User'];
+        if ($roles_valid_query) {
+            while ($r_val = $roles_valid_query->fetch_assoc()) {
+                $daftar_role_valid[] = $r_val['nama_peran'];
+            }
+        }
+        $daftar_role_valid = array_unique($daftar_role_valid);
+
+        if (!in_array($role_target, $daftar_role_valid)) {
             $pesan_error = "Peran (role) yang dipilih tidak valid!";
         } elseif (empty($nama_target)) {
             $pesan_error = "Nama lengkap tidak boleh kosong!";
@@ -3613,10 +3631,10 @@ if (isset($_SESSION['id_user'])) {
                         <?php foreach ($roles_list as $rl): ?>
                             <option value="<?php echo htmlspecialchars($rl['nama_peran']); ?>" <?php echo ($rl['nama_peran'] === 'User') ? 'selected' : ''; ?>>
                                 <?php 
-                                    if ($rl['nama_peran'] === 'Owner') echo '<?php echo ui_icon("crown", 12); ?> Owner (Pemilik Usaha - Akses Penuh)';
-                                    elseif ($rl['nama_peran'] === 'Admin') echo '<?php echo ui_icon("settings", 12); ?> Admin (Staf Pengelola Persediaan & Menu)';
-                                    elseif ($rl['nama_peran'] === 'User') echo '<?php echo ui_icon("user", 12); ?> User (Staf Operasional / Layar Kasir POS)';
-                                    else echo '<?php echo ui_icon("shield", 12); ?> ' . htmlspecialchars($rl['nama_peran']) . ' (' . htmlspecialchars($rl['deskripsi']) . ')';
+                                    if ($rl['nama_peran'] === 'Owner') echo 'Owner (Pemilik Usaha - Akses Penuh)';
+                                    elseif ($rl['nama_peran'] === 'Admin') echo 'Admin (Staf Pengelola Persediaan & Menu)';
+                                    elseif ($rl['nama_peran'] === 'User' || $rl['nama_peran'] === 'Kasir') echo 'Kasir / User (Staf Operasional POS)';
+                                    else echo htmlspecialchars($rl['nama_peran']) . ' (' . htmlspecialchars($rl['deskripsi']) . ')';
                                 ?>
                             </option>
                         <?php endforeach; ?>
@@ -3659,10 +3677,10 @@ if (isset($_SESSION['id_user'])) {
                         <?php foreach ($roles_list as $rl): ?>
                             <option value="<?php echo htmlspecialchars($rl['nama_peran']); ?>">
                                 <?php 
-                                    if ($rl['nama_peran'] === 'Owner') echo '<?php echo ui_icon("crown", 12); ?> Owner (Pemilik Usaha - Akses Penuh)';
-                                    elseif ($rl['nama_peran'] === 'Admin') echo '<?php echo ui_icon("settings", 12); ?> Admin (Staf Pengelola Persediaan & Menu)';
-                                    elseif ($rl['nama_peran'] === 'User') echo '<?php echo ui_icon("user", 12); ?> User (Staf Operasional / Layar Kasir POS)';
-                                    else echo '<?php echo ui_icon("shield", 12); ?> ' . htmlspecialchars($rl['nama_peran']) . ' (' . htmlspecialchars($rl['deskripsi']) . ')';
+                                    if ($rl['nama_peran'] === 'Owner') echo 'Owner (Pemilik Usaha - Akses Penuh)';
+                                    elseif ($rl['nama_peran'] === 'Admin') echo 'Admin (Staf Pengelola Persediaan & Menu)';
+                                    elseif ($rl['nama_peran'] === 'User' || $rl['nama_peran'] === 'Kasir') echo 'Kasir / User (Staf Operasional POS)';
+                                    else echo htmlspecialchars($rl['nama_peran']) . ' (' . htmlspecialchars($rl['deskripsi']) . ')';
                                 ?>
                             </option>
                         <?php endforeach; ?>
