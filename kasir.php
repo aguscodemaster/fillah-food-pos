@@ -1244,18 +1244,20 @@ $waktu_sekarang = date('d/m/Y H:i:s') . ' WIB';
                             <span class="card-header-badge"><?php echo htmlspecialchars($p['kategori']); ?></span>
                             
                             <div class="product-thumb">
-                                <?php if (!empty($thumb_src) && file_exists($thumb_src)): ?>
-                                    <img src="<?php echo htmlspecialchars($thumb_src); ?>" 
-                                         alt="<?php echo htmlspecialchars($p['nama_produk']); ?>"
-                                         loading="lazy"
-                                         style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
-                                <?php else: ?>
-                                    <?php if ($p['kategori'] === 'Makanan'): ?>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"></path><path d="M7 2v20"></path><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"></path></svg>
-                                    <?php else: ?>
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1a4 4 0 1 1 0 8h-1"></path><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"></path><line x1="6" y1="2" x2="6" y2="4"></line><line x1="10" y1="2" x2="10" y2="4"></line><line x1="14" y1="2" x2="14" y2="4"></line></svg>
-                                    <?php endif; ?>
-                                <?php endif; ?>
+                                <?php
+                                    $img_src = !empty($p['gambar']) ? $p['gambar'] : '';
+                                    if (empty($img_src)) {
+                                        $img_src = ($p['kategori'] === 'Makanan') ? 'uploads/menu_ayam_geprek.png' : 'uploads/menu_aneka_es.png';
+                                    }
+                                    $img_url = (file_exists($img_src) || file_exists(__DIR__ . '/' . $img_src)) 
+                                        ? $img_src 
+                                        : 'https://raw.githubusercontent.com/aguscodemaster/fillah-food-pos/main/' . $img_src;
+                                ?>
+                                <img src="<?php echo htmlspecialchars($img_url); ?>" 
+                                     alt="<?php echo htmlspecialchars($p['nama_produk']); ?>"
+                                     loading="lazy"
+                                     onerror="this.onerror=null; this.src='https://raw.githubusercontent.com/aguscodemaster/fillah-food-pos/main/<?php echo htmlspecialchars($img_src); ?>';"
+                                     style="width:100%;height:100%;object-fit:cover;border-radius:10px;">
                             </div>
                             
                             <h3 class="product-name"><?php echo htmlspecialchars($p['nama_produk']); ?></h3>
